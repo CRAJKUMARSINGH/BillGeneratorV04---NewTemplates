@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Extra Items</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; font-size: 10pt; }
+        h1 { text-align: center; margin: 5px 0; }
+        table { border-collapse: collapse; width: 198.5mm; margin: 10px auto; }
+        th, td { border: 1px solid black; padding: 3px; text-align: left; vertical-align: top; }
+        th { font-weight: bold; text-align: center; }
+        .header-info { text-align: left; margin: 10px auto; width: 198.5mm; }
+        .summary-row { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<h1>EXTRA ITEM SLIP</h1>
+
+<div class="header-info">
+    <p>Name of Work: Electric Repair and MTC work at Govt. Ambedkar hostel Ambamata, Govardhanvilas, Udaipur</p>
+    <p>Name of Contractor or supplier: M/s Seema Electrical Udaipur</p>
+    <p>Reference to work order or Agreement: 1179 Dt. 09-01-2025</p>
+</div>
+
+<table>
+    <tr>
+        <th width="11.1mm">S.No.</th>
+        <th width="14.2mm">Ref. BSR No.</th>
+        <th width="76.7mm">Particulars</th>
+        <th width="16mm">Qty.</th>
+        <th width="16mm">Unit</th>
+        <th width="15.3mm">Rate</th>
+        <th width="22.7mm">Amount</th>
+        <th width="22.6mm">Remarks</th>
+	<th width="12.6mm"></th>
+
+            </tr>
+    {% for item in data.extra_items %}
+    <tr>
+        <td>{{ item.serial_no or '' }}</td>
+        <td>{{ item.reference or '' }}</td>
+        <td>{{ item.description or '' }}</td>
+        <td>{{ item.quantity | round(0) | int if item.quantity else '' }}</td>
+        <td>{{ item.unit or '' }}</td>
+        <td>{{ item.rate | round(0) | int if item.rate else '' }}</td>
+        <td>{{ item.amount | round(0) | int if item.amount else '' }}</td>
+        <td>{{ item.remark or '' }}</td>
+        <td></td>
+    </tr>
+    {% endfor %}
+    <tr class="summary-row">
+        <td></td>
+        <td></td>
+        <td>Grand Total</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>{{ data.grand_total | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr class="summary-row">
+        <td></td>
+        <td></td>
+        <td>Tender Premium @ {{ "%.2f" | format(data.tender_premium_percent * 100) }}% {{ 'BELOW' if data.tender_premium_percent < 0 else '' }}</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>{{ data.tender_premium | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr class="summary-row">
+        <td></td>
+        <td></td>
+        <td>Total Amount of Extra Item Executed</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>{{ data.total_executed | round(0) | int }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
+
+</body>
+</html>

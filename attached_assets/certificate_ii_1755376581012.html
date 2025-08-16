@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>II. Certificate and Signatures</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', serif;
+            margin: 20px;
+            font-size: 12pt;
+            line-height: 1.5;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            font-size: 16pt;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+        }
+        .certificate-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .certificate-text {
+            text-align: justify;
+            margin-bottom: 10px;
+        }
+        .signature-block {
+            margin-top: 20px;
+            text-align: right;
+            padding-right: 20px;
+        }
+        .signature-block p {
+            margin: 5px 0;
+            font-style: italic;
+        }
+        .officer-details {
+            margin-top: 10px;
+            text-align: right;
+        }
+        .highlight {
+            font-weight: bold;
+        }
+        .entry-space {
+            display: inline-block;
+            min-width: 200px;
+            border-bottom: 1px solid #333;
+            vertical-align: bottom;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<h1>II. CERTIFICATE AND SIGNATURES</h1>
+
+<div class="certificate-section">
+    <div class="certificate-text">
+        The measurements on which are based the entries in columns 1 to 6 of Account I, were made by <span class="highlight entry-space">{{ data.measurement_officer }}</span> on <span class="highlight">{{ data.measurement_date }}</span>, and are recorded at page <span class="highlight">{{ data.measurement_book_page }}</span> of Measurement Book No. <span class="highlight">{{ data.measurement_book_no }}</span>.
+    </div>
+    <div class="certificate-text">
+        <span class="highlight">*Certified</span> that in addition to and quite apart from the quantities of work actually executed, as shown in column 4 of Account I, some work has actually been done in connection with several items and the value of such work (after deduction therefrom the proportionate amount of secured advances, if any, ultimately recoverable on account of the quantities of materials used therein) is in no case, less than the advance payments as per item 2 of the Memorandum, if payment is made.
+    </div>
+    <div class="certificate-text">
+        <span class="highlight">+Certified</span> that the contractor has made satisfactory progress with the work, and that the quantities and amounts claimed are correct and the work has been executed in accordance with the specifications and the terms of the contract.
+    </div>
+    <div class="certificate-text">
+        I also certify that the amount claimed is not more than the amount admissible under the contract.
+    </div>
+</div>
+
+<div class="signature-block">
+    <p>Dated signature of officer preparing the bill</p>
+    <div class="officer-details">
+        <p>{{ data.officer_name }}</p>
+        <p>{{ data.officer_designation }}</p>
+    </div>
+</div>
+
+<div class="signature-block">
+    <p>+Dated signature of officer authorising payment</p>
+    <div class="officer-details">
+        <p>{{ data.authorising_officer_name }}</p>
+        <p>{{ data.authorising_officer_designation }}</p>
+    </div>
+</div>
+
+</body>
+</html>

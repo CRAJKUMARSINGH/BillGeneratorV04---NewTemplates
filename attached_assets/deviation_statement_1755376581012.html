@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Deviation Statement</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; font-size: 10pt; }
+        h1 { text-align: center; margin: 5px 0; }
+        table { border-collapse: collapse; width: 198.5mm; margin: 10px auto; }
+        th, td { border: 1px solid black; padding: 3px; text-align: left; vertical-align: top; }
+        th { font-weight: bold; text-align: center; }
+        .header-info { text-align: left; margin: 10px auto; width: 198.5mm; }
+        .summary-table { border: none; width: auto; margin: 10px auto; text-align: left; }
+        .summary-table tr td:first-child { text-align: left; padding-left: 20%; }
+        .summary-table td { border: none; padding: 3px; text-align: right; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+
+<h1>Deviation Statement</h1>
+
+<div class="header-info">
+{% if data.header %}
+    <pre>
+{% for row in data.header %}
+    {% if row|length > 0 %}
+        {% for item in row %}
+            {% if item|trim %}
+                {% set trimmed = item|trim %}
+                {% if trimmed|length >= 10 and trimmed[4:5] == '-' and trimmed[7:8] == '-' and trimmed[:4]|int > 0 and trimmed[5:7]|int > 0 and trimmed[8:10]|int > 0 %}
+                    {{ trimmed[8:10] }}/{{ trimmed[5:7] }}/{{ trimmed[:4] }}
+                {% else %}
+                    {{ trimmed }}
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+    </pre>
+{% else %}
+    <p>Agreement No: {{ data.agreement_no }}</p>
+    <p>Name of Contractor or supplier: {{ data.name_of_firm }}</p>
+    <p>Name of Work: {{ data.name_of_work }}</p>
+{% endif %}
+</div>
+
+<table>
+    <tr>
+        <th width="6mm">ITEM No.</th>
+        <th width="95mm">Description</th>
+        <th width="10mm">Unit</th>
+        <th width="10mm">Qty as per Work Order</th>
+        <th width="12mm">Rate</th>
+        <th width="12mm">Amt as per Work Order Rs.</th>
+        <th width="12mm">Qty Executed</th>
+        <th width="12mm">Amt as per Executed Rs.</th>
+        <th width="12mm">Excess Qty</th>
+        <th width="12mm">Excess Amt Rs.</th>
+        <th width="12mm">Saving Qty</th>
+        <th width="12mm">Saving Amt Rs.</th>
+        <th width="40mm">REMARKS/ REASON.</th>
+    </tr>
+    {% for item in data.deviation_items %}
+    <tr>
+        <td>{{ item.serial_no or '' }}</td>
+        <td>{{ item.description or '' }}</td>
+        <td>{{ item.unit or '' }}</td>
+        <td>{{ "%.2f" | format(item.qty_wo) if item.qty_wo is defined and item.qty_wo != 0 else '' }}</td>
+        <td>{{ "%.2f" | format(item.rate) if item.rate is defined and item.rate != 0 else '' }}</td>
+        <td>{{ "%.2f" | format(item.amt_wo) if item.amt_wo is defined and item.amt_wo != 0 else '' }}</td>
+        <td>{{ "%.2f" | format(item.qty_bill) if item.qty_bill is defined and item.qty_bill != 0 else '' }}</td>
+        <td>{{ "%.2f" | format(item.amt_bill) if item.amt_bill is defined and item.amt_bill != 0 else '' }}</td>
+        <td>{{ "%.2f" | format(item.excess_qty) if item.excess_qty is defined and item.excess_qty != 0 else '' }}</td>
+        <td>{{ "%.2f" | format(item.excess_amt) if item.excess_amt is defined and item.excess_amt != 0 else '' }}</td>
+        <td>{{ "%.2f" | format(item.saving_qty) if item.saving_qty is defined and item.saving_qty != 0 else '' }}</td>
+        <td>{{ "%.2f" | format(item.saving_amt) if item.saving_amt is defined and item.saving_amt != 0 else '' }}</td>
+        <td>{{ item.remark or '' }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<table class="summary-table">
+    <tr>
+        <td>Grand Total Rs.</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.work_order_total) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.executed_total) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.overall_excess) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.overall_saving) }}</td>
+    </tr>
+    <tr>
+        <td>
+        {% if data.tender_premium_percent > 0 %}
+            Add Tender Premium ({{ "%.2f" | format(data.tender_premium_percent * 100) }}%)
+        {% else %}
+            Deduct Tender Premium ({{ "%.2f" | format(-data.tender_premium_percent * 100) }}% below)
+        {% endif %}
+        </td>
+        <td>{{ "%.2f" | format(data.deviation_summary.tender_premium_f) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.tender_premium_h) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.tender_premium_j) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.tender_premium_l) }}</td>
+    </tr>
+    <tr>
+        <td>Grand Total including Tender Premium Rs.</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.grand_total_f) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.grand_total_h) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.grand_total_j) }}</td>
+        <td>{{ "%.2f" | format(data.deviation_summary.grand_total_l) }}</td>
+    </tr>
+    <tr>
+        <td colspan="5">&nbsp;</td>
+    </tr>
+    <tr>
+        <td>Overall {% if data.deviation_summary.net_difference < 0 %}Saving{% else %}Excess{% endif %} With Respect to the Work Order Amount Rs.</td>
+        <td colspan="4">{{ "%.2f" | format(data.deviation_summary.net_difference) }}</td>
+    </tr>
+    <tr>
+        <td>Percentage of Deviation %</td>
+        <td colspan="4">{{ "%.2f" | format( (data.deviation_summary.net_difference / data.deviation_summary.grand_total_f * 100) | abs ) }}%</td>
+    </tr>
+</table>
+
+</body>
+</html>
