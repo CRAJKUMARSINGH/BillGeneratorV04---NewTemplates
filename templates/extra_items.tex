@@ -1,0 +1,63 @@
+\documentclass[11pt, portrait]{article}
+
+% Professional government document packages
+\usepackage[a4paper, portrait, margin=15mm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{fancyhdr}
+
+% Font configuration for government standards
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+% Professional spacing and formatting
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\renewcommand{\arraystretch}{1.3}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\textbf{Extra Items}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+\begin{document}
+
+% Document header
+\begin{center}
+{\LARGE \textbf{EXTRA ITEMS}}\\[0.5cm]
+{\large Government Document Template}\\[0.4cm]
+{\normalsize Generated from: extra\_items.html}\\[0.3cm]
+\rule{\textwidth}{0.8pt}
+\end{center}
+
+\vspace{1cm}
+
+% Extra items table
+\begin{longtable}{|p{15mm}|p{80mm}|p{15mm}|p{20mm}|p{20mm}|p{25mm}|}
+\hline
+\textbf{S.No} & \textbf{Description} & \textbf{Unit} & \textbf{Quantity} & \textbf{Rate} & \textbf{Amount} \\
+\hline
+\endhead
+{% for item in data.items %}
+{{ item.serial_no or '' }} & {{ item.description or '' }} & {{ item.unit or '' }} & {{ "%.2f"|format(item.quantity) }} & {{ "%.2f"|format(item.rate) }} & {{ "%.2f"|format(item.amount) }} \\
+\hline
+{% endfor %}
+\end{longtable}
+
+\vspace{1cm}
+
+% Total section
+\begin{tabular}{lr}
+\textbf{Total Extra Items:} & \textbf{Rs. {{ "%.2f"|format(data.items|sum(attribute='amount')) }}} \\
+\end{tabular}
+
+\end{document}

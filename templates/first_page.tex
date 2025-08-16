@@ -1,0 +1,94 @@
+\documentclass[11pt, portrait]{article}
+
+% Professional government document packages
+\usepackage[a4paper, portrait, margin=15mm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{fancyhdr}
+
+% Font configuration for government standards
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+% Professional spacing and formatting
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\renewcommand{\arraystretch}{1.3}
+
+% Table formatting improvements
+\setlength{\tabcolsep}{4pt}
+\setlength{\arrayrulewidth}{0.5pt}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\textbf{First Page}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+\begin{document}
+
+% Document header
+\begin{center}
+{\LARGE \textbf{CONTRACTOR BILL}}\\[0.5cm]
+{\large Government Document Template}\\[0.4cm]
+{\normalsize Generated from: first\_page.html}\\[0.3cm]
+\rule{\textwidth}{0.8pt}
+\end{center}
+
+\vspace{1cm}
+
+% Header Information
+{% if data.header %}
+{% for row in data.header %}
+{% if row|length > 0 %}
+{% for item in row %}
+{% if item|trim %}
+{{ item|trim }}\\
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+\vspace{0.5cm}
+
+% Main content table
+\begin{longtable}{|p{11.1mm}|p{74.2mm}|p{11.7mm}|p{16mm}|p{16mm}|p{15.3mm}|p{22.7mm}|p{17.6mm}|p{13.9mm}|}
+\hline
+\textbf{Item No.} & \textbf{Item of Work supplies} & \textbf{Unit} & \textbf{Quantity since last} & \textbf{Quantity upto date} & \textbf{Rate} & \textbf{Amount upto date} & \textbf{Amount Since previous} & \textbf{Remark} \\
+\hline
+\endhead
+{% for item in data.bill_items %}
+{{ item.serial_no or '' }} & {{ item.description or '' }} & {{ item.unit or '' }} & {{ "%.2f"|format(item.quantity_since) if item.quantity_since is defined else '' }} & {{ "%.2f"|format(item.quantity_upto) if item.quantity_upto is defined else '' }} & {{ "%.2f"|format(item.rate) if item.rate is defined else '' }} & {{ "%.2f"|format(item.amount_upto) if item.amount_upto is defined else '' }} & {{ "%.2f"|format(item.amount_since) if item.amount_since is defined else '' }} & {{ item.remark or '' }} \\
+\hline
+{% endfor %}
+\end{longtable}
+
+\vspace{1cm}
+
+% Summary section
+\begin{tabular}{lr}
+Main Items Grand Total Rs. & {{ "%.2f"|format(data.bill_total) }} \\
+Tender Premium & {{ "%.2f"|format(data.bill_premium) }} \\
+Total Payable Amount Rs. & {{ "%.2f"|format(data.bill_grand_total + data.extra_items_sum) }} \\
+\end{tabular}
+
+\vspace{1cm}
+
+% Footer
+\begin{center}
+\rule{\textwidth}{0.4pt}\\[0.3cm]
+{\small This document was converted from HTML template: \texttt{first\_page.html}}\\
+{\small Converted to LaTeX format for professional government document generation}\\
+{\small Compilation date: \today}
+\end{center}
+
+\end{document}

@@ -547,6 +547,104 @@ def generate_pdf(sheet_name, data, orientation, output_path):
         _log_traceback()
         raise
 
+def generate_latex_pdf(template_name, data, output_path):
+    """Generate PDF from LaTeX template"""
+    try:
+        # Check if pdflatex is available
+        if not shutil.which("pdflatex"):
+            _log_warn("pdflatex not available for LaTeX PDF generation")
+            return False
+            
+        template = env.get_template(f"{template_name}.tex")
+        latex_content = template.render(data=data)
+        
+        temp_dir = get_temp_dir()
+        tex_path = os.path.join(temp_dir, f"{template_name}.tex")
+        
+        with open(tex_path, "w", encoding="utf-8") as f:
+            f.write(latex_content)
+        
+        # Run pdflatex
+        result = subprocess.run(
+            ["pdflatex", "-output-directory", temp_dir, tex_path],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if result.returncode == 0:
+            pdf_source = os.path.join(temp_dir, f"{template_name}.pdf")
+            if os.path.exists(pdf_source):
+                shutil.copy2(pdf_source, output_path)
+                return True
+        else:
+            _log_warn(f"LaTeX compilation failed: {result.stderr}")
+            
+    except Exception as e:
+        _log_warn(f"LaTeX PDF generation error: {e}")
+    
+    return False
+
+def create_combined_zip(templates_data):
+    """Create a zip file with all generated documents"""
+    temp_dir = get_temp_dir()
+    zip_path = os.path.join(temp_dir, "Bill_Documents.zip")
+    
+    templates = [
+        ("first_page", "First_Page"),
+        ("certificate_ii", "Certificate_II"),
+        ("certificate_iii", "Certificate_III"),
+        ("deviation_statement", "Deviation_Statement"),
+        ("extra_items", "Extra_Items"),
+        ("note_sheet", "Note_Sheet")
+    ]
+    
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for template_name, doc_name in templates:
+            try:
+                # Generate HTML
+                html_template = env.get_template(f"{template_name}.html")
+                html_content = html_template.render(data=templates_data[template_name])
+                zip_file.writestr(f"{doc_name}.html", html_content)
+                
+                # Generate HTML-based PDF
+                if config:
+                    try:
+                        pdf_path = os.path.join(temp_dir, f"{doc_name}_HTML.pdf")
+                        options = {
+                            'page-size': 'A4',
+                            'margin-top': '10mm',
+                            'margin-right': '10mm',
+                            'margin-bottom': '10mm',
+                            'margin-left': '10mm',
+                            'encoding': "UTF-8",
+                            'no-outline': None,
+                            'enable-local-file-access': None
+                        }
+                        pdfkit.from_string(html_content, pdf_path, options=options, configuration=config)
+                        if os.path.exists(pdf_path):
+                            with open(pdf_path, 'rb') as f:
+                                zip_file.writestr(f"{doc_name}_HTML.pdf", f.read())
+                    except Exception as e:
+                        _log_warn(f"HTML PDF generation failed for {doc_name}: {e}")
+                
+                # Generate LaTeX-based PDF if available
+                latex_pdf_path = os.path.join(temp_dir, f"{doc_name}_LaTeX.pdf")
+                if generate_latex_pdf(template_name, templates_data[template_name], latex_pdf_path):
+                    with open(latex_pdf_path, 'rb') as f:
+                        zip_file.writestr(f"{doc_name}_LaTeX.pdf", f.read())
+                
+                # Generate LaTeX source
+                if os.path.exists(f"templates/{template_name}.tex"):
+                    latex_template = env.get_template(f"{template_name}.tex")
+                    latex_content = latex_template.render(data=templates_data[template_name])
+                    zip_file.writestr(f"{doc_name}.tex", latex_content)
+                    
+            except Exception as e:
+                _log_warn(f"Error generating {doc_name}: {e}")
+    
+    return zip_path if os.path.exists(zip_path) else None
+
 def main():
     st.title("Government Bill Generator")
     
@@ -581,9 +679,6 @@ def main():
             
             st.success("Bill processed successfully!")
             
-            # Create download section
-            st.subheader("Download Generated Documents")
-            
             # Convert data for templates
             templates_data = {
                 "first_page": {"bill_items": first_page_data["items"], "header": first_page_data["header"], "totals": first_page_data["totals"]},
@@ -593,6 +688,35 @@ def main():
                 "extra_items": extra_items_data,
                 "note_sheet": generate_bill_notes(first_page_data["totals"]["payable"], 1000000, sum(item.get("amount", 0) for item in extra_items_data["items"]))
             }
+            
+            # Combined download section
+            st.subheader("Download All Documents")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("📦 Download Complete Package (ZIP)", use_container_width=True):
+                    with st.spinner("Creating complete document package..."):
+                        zip_path = create_combined_zip(templates_data)
+                        if zip_path and os.path.exists(zip_path):
+                            with open(zip_path, 'rb') as f:
+                                zip_content = f.read()
+                            
+                            st.download_button(
+                                label="📥 Download ZIP Package",
+                                data=zip_content,
+                                file_name="Bill_Documents_Complete.zip",
+                                mime="application/zip",
+                                use_container_width=True
+                            )
+                            st.success("✅ Package includes: HTML, HTML-PDFs, LaTeX-PDFs, and LaTeX sources")
+                        else:
+                            st.error("Failed to create document package")
+            
+            with col2:
+                st.info("📋 **Package Contents:**\n- HTML templates\n- PDF from HTML\n- PDF from LaTeX\n- LaTeX source files")
+            
+            # Individual document generation
+            st.subheader("Individual Documents")
             
             templates = [
                 ("first_page", "First_Page"),
@@ -604,63 +728,89 @@ def main():
             ]
             
             for template_name, doc_name in templates:
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    if st.button(f"Generate PDF - {doc_name}"):
-                        with st.spinner(f"Generating {doc_name} PDF..."):
+                with st.expander(f"📄 {doc_name}", expanded=False):
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        if st.button(f"HTML - {doc_name}", key=f"html_{template_name}"):
                             try:
                                 template = env.get_template(f"{template_name}.html")
                                 html_content = template.render(data=templates_data[template_name])
                                 
-                                if config:
+                                st.download_button(
+                                    label=f"📥 Download {doc_name}.html",
+                                    data=html_content,
+                                    file_name=f"{doc_name}.html",
+                                    mime="text/html",
+                                    key=f"html_dl_{template_name}"
+                                )
+                            except Exception as e:
+                                st.error(f"Error: {str(e)}")
+                    
+                    with col2:
+                        if st.button(f"PDF (HTML) - {doc_name}", key=f"pdf_html_{template_name}"):
+                            if config:
+                                try:
+                                    with st.spinner(f"Generating {doc_name} PDF..."):
+                                        template = env.get_template(f"{template_name}.html")
+                                        html_content = template.render(data=templates_data[template_name])
+                                        
+                                        temp_dir = get_temp_dir()
+                                        pdf_path = os.path.join(temp_dir, f"{doc_name}.pdf")
+                                        
+                                        options = {
+                                            'page-size': 'A4',
+                                            'margin-top': '10mm',
+                                            'margin-right': '10mm',
+                                            'margin-bottom': '10mm',
+                                            'margin-left': '10mm',
+                                            'encoding': "UTF-8",
+                                            'no-outline': None,
+                                            'enable-local-file-access': None
+                                        }
+                                        
+                                        pdfkit.from_string(html_content, pdf_path, options=options, configuration=config)
+                                        
+                                        if os.path.exists(pdf_path):
+                                            with open(pdf_path, 'rb') as f:
+                                                pdf_content = f.read()
+                                            
+                                            st.download_button(
+                                                label=f"📥 Download {doc_name}.pdf",
+                                                data=pdf_content,
+                                                file_name=f"{doc_name}_HTML.pdf",
+                                                mime="application/pdf",
+                                                key=f"pdf_html_dl_{template_name}"
+                                            )
+                                        else:
+                                            st.error(f"Failed to generate {doc_name} PDF")
+                                except Exception as e:
+                                    st.error(f"Error: {str(e)}")
+                            else:
+                                st.error("PDF generation not available")
+                    
+                    with col3:
+                        if st.button(f"PDF (LaTeX) - {doc_name}", key=f"pdf_latex_{template_name}"):
+                            try:
+                                with st.spinner(f"Generating LaTeX {doc_name} PDF..."):
                                     temp_dir = get_temp_dir()
-                                    pdf_path = os.path.join(temp_dir, f"{doc_name}.pdf")
+                                    pdf_path = os.path.join(temp_dir, f"{doc_name}_LaTeX.pdf")
                                     
-                                    options = {
-                                        'page-size': 'A4',
-                                        'margin-top': '10mm',
-                                        'margin-right': '10mm',
-                                        'margin-bottom': '10mm',
-                                        'margin-left': '10mm',
-                                        'encoding': "UTF-8",
-                                        'no-outline': None,
-                                        'enable-local-file-access': None
-                                    }
-                                    
-                                    pdfkit.from_string(html_content, pdf_path, options=options, configuration=config)
-                                    
-                                    if os.path.exists(pdf_path):
+                                    if generate_latex_pdf(template_name, templates_data[template_name], pdf_path):
                                         with open(pdf_path, 'rb') as f:
                                             pdf_content = f.read()
                                         
                                         st.download_button(
-                                            label=f"Download {doc_name} PDF",
+                                            label=f"📥 Download {doc_name}_LaTeX.pdf",
                                             data=pdf_content,
-                                            file_name=f"{doc_name}.pdf",
-                                            mime="application/pdf"
+                                            file_name=f"{doc_name}_LaTeX.pdf",
+                                            mime="application/pdf",
+                                            key=f"pdf_latex_dl_{template_name}"
                                         )
                                     else:
-                                        st.error(f"Failed to generate {doc_name} PDF")
-                                else:
-                                    st.error("PDF generation not available - wkhtmltopdf not found")
+                                        st.error("LaTeX PDF generation failed - pdflatex not available")
                             except Exception as e:
-                                st.error(f"Error generating {doc_name}: {str(e)}")
-                
-                with col2:
-                    if st.button(f"Generate HTML - {doc_name}"):
-                        try:
-                            template = env.get_template(f"{template_name}.html")
-                            html_content = template.render(data=templates_data[template_name])
-                            
-                            st.download_button(
-                                label=f"Download {doc_name} HTML",
-                                data=html_content,
-                                file_name=f"{doc_name}.html",
-                                mime="text/html"
-                            )
-                        except Exception as e:
-                            st.error(f"Error generating {doc_name}: {str(e)}")
+                                st.error(f"Error: {str(e)}")
             
             # Display summary
             with st.expander("Bill Summary", expanded=True):

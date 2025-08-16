@@ -1,0 +1,105 @@
+\documentclass[11pt, portrait]{article}
+
+% Professional government document packages
+\usepackage[a4paper, portrait, margin=15mm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{fancyhdr}
+
+% Font configuration for government standards
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+% Professional spacing and formatting
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\renewcommand{\arraystretch}{1.3}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\textbf{III. Memorandum of Payments}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+\begin{document}
+
+% Document header
+\begin{center}
+{\LARGE \textbf{III. MEMORANDUM OF PAYMENTS}}\\[0.5cm]
+{\large Government Document Template}\\[0.4cm]
+{\normalsize Generated from: certificate\_iii.html}\\[0.3cm]
+\rule{\textwidth}{0.8pt}
+\end{center}
+
+\vspace{1cm}
+
+% Main payment table
+\begin{longtable}{|p{1.82mm}|p{17.12mm}|p{121.87mm}|p{4.03mm}|p{17.72mm}|p{4.03mm}|p{13.49mm}|}
+\hline
+\textbf{S.No.} & \textbf{Description} & \textbf{Entry No.} & & \textbf{Amount Rs.} & & \\
+\hline
+\endhead
+1. & Total value of work actually measured, as per Account I, Col. 5, Entry [A] & [A] & & {{ data.totals.grand_total | round(0) | int }} & & \\
+\hline
+2. & Total up-to-date advance payments for work not yet measured as per details given below: & & & & & \\
+\hline
+& (a) Total as per previous bill & [B] & & Nil & & \\
+\hline
+& (b) Since previous bill & [D] & & Nil & & \\
+\hline
+3. & Total up-to-date secured advances on security of materials & [C] & & Nil & & \\
+\hline
+4. & Total (Items 1 + 2 + 3) A+B+C & & & {{ data.totals.grand_total | round(0) | int }} & & \\
+\hline
+5. & Deduct: Amount withheld & & & & & \\
+\hline
+& (a) From previous bill as per last Running Account Bill & [5] & & Nil & & \\
+\hline
+& (b) From this bill & & & Nil & & \\
+\hline
+6. & Balance i.e. "up-to-date" payments (Item 4-5) & & & {{ data.totals.grand_total | round(0) | int }} & & \\
+\hline
+7. & Total amount of payments already made as per Entry (K) & [K] & & 0 & & \\
+\hline
+8. & Payments now to be made, as detailed below: & & & {{ data.totals.net_payable | round(0) | int }} & & \\
+\hline
+& (a) By recovery of amounts creditable to this work & [a] & & & & \\
+\hline
+& SD @ 10\% & & & {{ data.totals.sd_amount | round(0) | int }} & & \\
+\hline
+& IT @ 2\% & & & {{ data.totals.it_amount | round(0) | int }} & & \\
+\hline
+& GST @ 2\% & & & {{ data.totals.gst_amount | round(0) | int }} & & \\
+\hline
+& LC @ 1\% & & & {{ data.totals.lc_amount | round(0) | int }} & & \\
+\hline
+& Total recovery & & & {{ data.totals.total_deductions | round(0) | int }} & & \\
+\hline
+& (b) By recovery of amount creditable to other works & [b] & & Nil & & \\
+\hline
+& (c) By cheque & [c] & & {{ data.totals.net_payable | round(0) | int }} & & \\
+\hline
+\end{longtable}
+
+\vspace{1cm}
+
+\begin{center}
+Pay Rs. {{ data.totals.net_payable | round(0) | int }}\\[0.3cm]
+Pay Rupees {{ data.payable_words }} (by cheque)\\[0.3cm]
+Dated the {{ data.current_date.strftime('%d %m %Y') | replace(' ', ' / ') }}\\[0.3cm]
+Dated initials of Disbursing Officer\\[0.5cm]
+Received Rupees {{ data.payable_words }} (by cheque) as per above memorandum, on account of this bill\\[0.3cm]
+Signature of Contractor\\[0.5cm]
+Paid by me, vide cheque No. \_\_\_\_\_\_\_ dated {{ data.current_date.strftime('%d %m %Y') | replace(' ', ' / ') }}\\[0.3cm]
+Dated initials of person actually making the payment
+\end{center}
+
+\end{document}

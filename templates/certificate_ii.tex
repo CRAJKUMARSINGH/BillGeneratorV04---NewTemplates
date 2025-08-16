@@ -1,0 +1,77 @@
+\documentclass[11pt, portrait]{article}
+
+% Professional government document packages
+\\usepackage[a4paper, portrait, margin=15mm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\\usepackage{array}
+\\usepackage{booktabs}
+\usepackage{longtable}
+\\usepackage{xcolor}
+\\usepackage{amsmath}
+\usepackage{amsfonts}
+\\usepackage{fancyhdr}
+
+% Font configuration for government standards
+\\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+% Professional spacing and formatting
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\renewcommand{\arraystretch}{1.3}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\textbf{II. Certificate and Signatures}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+\begin{document}
+
+% Document header
+\begin{center}
+{\LARGE \textbf{II. CERTIFICATE AND SIGNATURES}}\\[0.5cm]
+{\large Government Document Template}\\[0.4cm]
+{\normalsize Generated from: certificate\_ii.html}\\[0.3cm]
+\rule{\textwidth}{0.8pt}
+\end{center}
+
+\vspace{1cm}
+
+% Main content
+\begin{center}
+\large CERTIFICATION OF WORK EXECUTED
+\end{center}
+
+\vspace{0.5cm}
+
+The measurements on which are based the entries in columns 1 to 6 of Account I, were made by \textbf{{{ data.measurement_officer }}} on \textbf{{{ data.measurement_date }}}, and are recorded at page \textbf{{{ data.measurement_book_page }}} of Measurement Book No. \textbf{{{ data.measurement_book_no }}}.
+
+\vspace{0.5cm}
+
+\textbf{*Certified} that in addition to and quite apart from the quantities of work actually executed, as shown in column 4 of Account I, some work has actually been done in connection with several items and the value of such work (after deduction therefrom the proportionate amount of secured advances, if any, ultimately recoverable on account of the quantities of materials used therein) is in no case, less than the advance payments as per item 2 of the Memorandum, if payment is made.
+
+\vspace{0.5cm}
+
+\textbf{+Certified} that the contractor has made satisfactory progress with the work, and that the quantities and amounts claimed are correct and the work has been executed in accordance with the specifications and the terms of the contract.
+
+\vspace{0.5cm}
+
+I also certify that the amount claimed is not more than the amount admissible under the contract.
+
+\vspace{1cm}
+
+\begin{flushright}
+Dated signature of officer preparing the bill\\[0.5cm]
+{{ data.officer_name }}\\
+{{ data.officer_designation }}\\[1cm]
+
++Dated signature of officer authorising payment\\[0.5cm]
+{{ data.authorising_officer_name }}\\
+{{ data.authorising_officer_designation }}
+\end{flushright}
+
+\end{documen

@@ -1,0 +1,67 @@
+\documentclass[11pt, landscape]{article}
+
+% Professional government document packages
+\usepackage[a4paper, landscape, margin=15mm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{fancyhdr}
+
+% Font configuration for government standards
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+% Professional spacing and formatting
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\renewcommand{\arraystretch}{1.3}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[C]{\textbf{Deviation Statement}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+
+\begin{document}
+
+% Document header
+\begin{center}
+{\LARGE \textbf{DEVIATION STATEMENT}}\\[0.5cm]
+{\large Government Document Template}\\[0.4cm]
+{\normalsize Generated from: deviation\_statement.html}\\[0.3cm]
+\rule{\textwidth}{0.8pt}
+\end{center}
+
+\vspace{1cm}
+
+% Main deviation table
+\begin{longtable}{|p{8mm}|p{50mm}|p{8mm}|p{15mm}|p{12mm}|p{15mm}|p{15mm}|p{12mm}|p{15mm}|p{12mm}|p{15mm}|p{15mm}|p{25mm}|}
+\hline
+\textbf{S.No} & \textbf{Description} & \textbf{Unit} & \textbf{WO Qty} & \textbf{Rate} & \textbf{WO Amt} & \textbf{Bill Qty} & \textbf{Bill Amt} & \textbf{Excess Qty} & \textbf{Excess Amt} & \textbf{Saving Qty} & \textbf{Saving Amt} & \textbf{Remark} \\
+\hline
+\endhead
+{% for item in data.items %}
+{{ item.serial_no or '' }} & {{ item.description or '' }} & {{ item.unit or '' }} & {{ "%.2f"|format(item.qty_wo) }} & {{ "%.2f"|format(item.rate) }} & {{ "%.2f"|format(item.amt_wo) }} & {{ "%.2f"|format(item.qty_bill) }} & {{ "%.2f"|format(item.amt_bill) }} & {{ "%.2f"|format(item.excess_qty) }} & {{ "%.2f"|format(item.excess_amt) }} & {{ "%.2f"|format(item.saving_qty) }} & {{ "%.2f"|format(item.saving_amt) }} & {{ item.remark or '' }} \\
+\hline
+{% endfor %}
+\end{longtable}
+
+\vspace{1cm}
+
+% Summary section
+\begin{tabular}{lr}
+Work Order Total: & Rs. {{ "%.2f"|format(data.summary.work_order_total) }} \\
+Executed Total: & Rs. {{ "%.2f"|format(data.summary.executed_total) }} \\
+Overall Excess: & Rs. {{ "%.2f"|format(data.summary.overall_excess) }} \\
+Overall Saving: & Rs. {{ "%.2f"|format(data.summary.overall_saving) }} \\
+Net Difference: & Rs. {{ "%.2f"|format(data.summary.net_difference) }} \\
+\end{tabular}
+
+\end{document}
