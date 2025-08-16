@@ -1,127 +1,143 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>First Page</title>
+    <meta charset="UTF-8">
+    <title>Contractor Bill</title>
     <style>
-        @page {
-            size: A4 landscape;
-            margin: 10mm;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 9px;
-            line-height: 1.1;
-        }
-        .header-section {
-            margin-bottom: 15px;
-        }
-        .header-title {
-            text-align: center;
-            font-size: 14px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .header-subtitle {
-            text-align: center;
-            font-size: 10px;
-            margin-bottom: 15px;
-        }
-        .header-info {
-            display: block;
-            margin-bottom: 2px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        th, td {
-            border: 1px solid black;
-            padding: 2px;
-            text-align: left;
-            vertical-align: top;
-            font-size: 8px;
-        }
-        th {
-            background-color: #f0f0f0;
-            font-weight: bold;
-            text-align: center;
-        }
-        .amount-cell {
-            text-align: right;
-        }
-        .divider-row {
-            background-color: #e0e0e0;
-            font-weight: bold;
-            text-align: center;
-        }
-        .total-section {
-            margin-top: 10px;
-            text-align: right;
-        }
-        .bold {
-            font-weight: bold;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; font-size: 10pt; }
+        h1, h2, h3 { text-align: center; margin: 5px 0; }
+        table { border-collapse: collapse; width: 198.5mm; margin: 10px auto; }
+        th, td { border: 1px solid black; padding: 3px; text-align: left; vertical-align: top; }
+        th { font-weight: bold; text-align: center; }
+        .header-info { text-align: left; margin: 10px auto; width: 198.5mm; }
+        .summary-table { border: none; width: auto; margin: 10px auto; }
+        .summary-table td { border: none; padding: 3px; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
     </style>
 </head>
 <body>
-    <div class="header-section">
-        <div class="header-title">CONTRACTOR BILL</div>
-        <div class="header-subtitle">FOR CONTRACTORS & SUPPLIERS ONLY FOR PAYMENT FOR WORK OR SUPPLIES ACTUALLY MEASURED</div>
-        
-        {% if data.header %}
-            {% for row in data.header %}
-                {% if row and row[0] %}
-                    <div class="header-info">{{ row[0] }}{% if row|length > 1 and row[1] %}: {{ row[1] }}{% endif %}</div>
-                {% endif %}
-            {% endfor %}
-        {% endif %}
-        
-        <div class="header-info"><strong>WORK ORDER AMOUNT RS. {{ data.work_order_amount or "0" }}</strong></div>
-    </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Item No.</th>
-                <th>Item of Work supplies (Grouped under "sub-head" and "sub work" of estimate)</th>
-                <th>Unit</th>
-                <th>Quantity executed (or supplied) since last certificate</th>
-                <th>Quantity executed (or supplied) upto date as per MB</th>
-                <th>Rate</th>
-                <th>Amount upto date</th>
-                <th>Amount Since previous bill (Total for each sub-head)</th>
-                <th>Remark</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in data.items %}
-                {% if item.get('is_divider') %}
-                    <tr class="divider-row">
-                        <td colspan="9">{{ item.description }}</td>
-                    </tr>
+<h1>CONTRACTOR BILL</h1>
+
+<div class="header-info">
+{% if data.header %}
+    <pre>
+{% for row in data.header %}
+    {% if row|length > 0 %}
+        {% for item in row %}
+            {% if item|trim %}
+                {% set trimmed = item|trim %}
+                {% if trimmed|length >= 10 and trimmed[4:5] == '-' and trimmed[7:8] == '-' and trimmed[:4]|int > 0 and trimmed[5:7]|int > 0 and trimmed[8:10]|int > 0 %}
+                    {{ trimmed[8:10] }}/{{ trimmed[5:7] }}/{{ trimmed[:4] }}
                 {% else %}
-                    <tr>
-                        <td>{{ item.serial_no }}</td>
-                        <td>{{ item.description }}</td>
-                        <td>{{ item.unit }}</td>
-                        <td class="amount-cell">{{ "%.1f"|format(item.quantity) if item.quantity else "" }}</td>
-                        <td class="amount-cell">{{ "%.1f"|format(item.quantity) if item.quantity else "" }}</td>
-                        <td class="amount-cell">{{ "%.1f"|format(item.rate) if item.rate else "" }}</td>
-                        <td class="amount-cell">{{ item.amount if item.amount else "" }}</td>
-                        <td class="amount-cell">{{ item.amount if item.amount else "" }}</td>
-                        <td>{{ item.remark }}</td>
-                    </tr>
+                    {{ trimmed }}
                 {% endif %}
-            {% endfor %}
-        </tbody>
-    </table>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endfor %}
+    </pre>
+{% else %}
+    <p>Name of Contractor or supplier: {{ data.name_of_firm }}</p>
+    <p>Name of Work: {{ data.name_of_work }}</p>
+    <p>Serial No. of this bill: {{ data.bill_no }}</p>
+    <p>No. and date of the last bill: {{ data.last_bill }}</p>
+    <p>Reference to work order or Agreement: {{ data.reference }}</p>
+    <p>Agreement No: {{ data.agreement_no }}</p>
+    <p>Date of written order to commence work: {{ data.date_commencement }}</p>
+    <p>St. date of Start: {{ data.date_start }}</p>
+    <p>St. date of completion: {{ data.date_completion }}</p>
+    <p>Date of actual completion of work: {{ data.actual_completion }}</p>
+    <p>Date of measurement: {{ data.measurement_date }}</p>
+    <p>WORK ORDER AMOUNT RS. {{ data.work_order_amount }}</p>
+{% endif %}
+</div>
 
-    <div class="total-section">
-        <div><strong>Grand Total Rs. {{ data.totals.grand_total or 0 }}</strong></div>
-        <div><strong>Tender Premium @ {{ data.premium_percent or 0 }}% {{ data.totals.premium_amount or 0 }}</strong></div>
-        <div><strong>Sum of Extra Items (including Tender Premium) (See on Left) Rs. {{ data.totals.extra_items_total or 0 }}</strong></div>
-        <div class="bold" style="font-size: 12px;"><strong>Payable Amount Rs. {{ data.totals.net_payable or 0 }}</strong></div>
-    </div>
+<h2>FOR CONTRACTORS & SUPPLIERS ONLY FOR PAYMENT FOR WORK OR SUPPLIES ACTUALLY MEASURED</h2>
+<h3>WORK ORDER</h3>
+<p>Cash Book Voucher No. Date-</p>
+
+<table>
+    <tr>
+        <th width="11.7mm">Unit</th>
+        <th width="16mm">Quantity executed (or supplied) since last certificate</th>
+        <th width="16mm">Quantity executed (or supplied) upto date as per MB</th>
+        <th width="11.1mm">Item No.</th>
+        <th width="74.2mm">Item of Work supplies (Grouped under "sub-head" and "sub work" of estimate)</th>
+        <th width="15.3mm">Rate</th>
+        <th width="22.7mm">Amount upto date</th>
+        <th width="17.6mm">Amount Since previous bill (Total for each sub-head)</th>
+        <th width="13.9mm">Remark</th>
+    </tr>
+    {% for item in data.bill_items %}
+    <tr>
+        <td>{{ item.unit or '' }}</td>
+        <td>{{ "%.2f" | format(item.quantity_since) if item.quantity_since is defined else '' }}</td>
+        <td>{{ "%.2f" | format(item.quantity_upto) if item.quantity_upto is defined else '' }}</td>
+        <td>{{ item.serial_no or '' }}</td>
+        <td>{{ item.description or '' }}</td>
+        <td>{{ "%.2f" | format(item.rate) if item.rate is defined else '' }}</td>
+        <td>{{ "%.2f" | format(item.amount_upto) if item.amount_upto is defined else '' }}</td>
+        <td>{{ "%.2f" | format(item.amount_since) if item.amount_since is defined else '' }}</td>
+        <td>{{ item.remark or '' }}</td>
+    </tr>
+    {% endfor %}
+    {% if data.extra_items %}
+    <tr>
+        <td colspan="9">Extra Items</td>
+    </tr>
+    {% for item in data.extra_items %}
+    <tr>
+        <td>{{ item.unit or '' }}</td>
+        <td>{{ "%.2f" | format(item.quantity_since) if item.quantity_since is defined else '' }}</td>
+        <td>{{ "%.2f" | format(item.quantity_upto) if item.quantity_upto is defined else '' }}</td>
+        <td>{{ item.serial_no or '' }}</td>
+        <td>{{ item.description or '' }}</td>
+        <td>{{ "%.2f" | format(item.rate) if item.rate is defined else '' }}</td>
+        <td>{{ "%.2f" | format(item.amount_upto) if item.amount_upto is defined else '' }}</td>
+        <td>{{ "%.2f" | format(item.amount_since) if item.amount_since is defined else '' }}</td>
+        <td>{{ item.remark or '' }}</td>
+    </tr>
+    {% endfor %}
+    <tr>
+        <td colspan="5">Extra Items Total Rs.</td>
+        <td colspan="4">{{ "%.2f" | format(data.extra_items_base) if data.extra_items_base > 0 else 'NIL' }}</td>
+    </tr>
+    <tr>
+        <td colspan="5">Tender Premium @ {{ "%.2f%%" | format(data.tender_premium_percent * 100) }}</td>
+        <td colspan="4">{{ "%.2f" | format(data.extra_premium) if data.extra_premium > 0 else 'NIL' }}</td>
+    </tr>
+    <tr>
+        <td colspan="5">Extra Items Grand Total (including Tender Premium) Rs.</td>
+        <td colspan="4">{{ "%.2f" | format(data.extra_items_sum) if data.extra_items_sum > 0 else 'NIL' }}</td>
+    </tr>
+    {% endif %}
+</table>
+
+<table class="summary-table">
+    <tr>
+        <td>Main Items Grand Total Rs.</td>
+        <td>{{ "%.2f" | format(data.bill_total) }}</td>
+    </tr>
+    <tr>
+        <td>Tender Premium @ {{ "%.2f%%" | format(data.tender_premium_percent * 100) }}</td>
+        <td>{{ "%.2f" | format(data.bill_premium) }}</td>
+    </tr>
+    <tr>
+        <td>Total Payable Amount Rs.</td>
+        <td>{{ "%.2f" | format(data.bill_grand_total + data.extra_items_sum) }}</td>
+    </tr>
+    {% if data.last_bill_amount is not none %}
+    <tr>
+        <td>Less Amount Paid wide Last Bill</td>
+        <td>{{ "%.2f" | format(data.last_bill_amount) }}</td>
+    </tr>
+    <tr>
+        <td>Net Payable Amount</td>
+        <td>{{ "%.2f" | format(data.net_payable) }}</td>
+    </tr>
+    {% endif %}
+</table>
+
 </body>
 </html>

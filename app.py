@@ -173,8 +173,7 @@ def ensure_wkhtmltopdf() -> str | None:
     env_path = os.getenv("WKHTMLTOPDF_PATH")
     if env_path and os.path.exists(env_path):
         return env_path
-    # 3) Try to download a static binary (linux generic amd64)
-    # Known packaging release URL (0.12.6-1) with patched Qt
+    # 3) Download and extract a Linux static binary
     urls = [
         "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1_linux-generic-amd64.tar.xz",
         "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1.centos8.x86_64.rpm.tar.xz"
@@ -236,20 +235,11 @@ def number_to_words(number):
 
 def process_bill(ws_wo, ws_bq, ws_extra, premium_percent, premium_type):
     _log_debug("Starting process_bill")
-    
-    # Initialize data structures
-    data = {
-        'header': [],
-        'items': [],
-        'work_order_items': [],
-        'extra_items': [],
-        'totals': {},
-        'premium_percent': premium_percent,
-        'premium_type': premium_type,
-        'certificates': {},
-        'deductions': {},
-        'calculations': {}
-    }
+    first_page_data = {"header": [], "items": [], "totals": {}}
+    last_page_data = {"payable_amount": 0, "amount_words": ""}
+    deviation_data = {"items": [], "summary": {}}
+    extra_items_data = {"items": []}
+    note_sheet_data = {"notes": []}
     
     from datetime import datetime, date
 
@@ -263,27 +253,14 @@ def process_bill(ws_wo, ws_bq, ws_extra, premium_percent, premium_type):
             if isinstance(val, (pd.Timestamp, datetime, date)):
                 header_data[i][j] = val.strftime("%d-%m-%Y")
 
-    # Extract key header information
-    data['header'] = header_data
-    data['contractor_name'] = str(header_data[5][0]) if len(header_data) > 5 else ""
-    data['work_name'] = str(header_data[7][0]) if len(header_data) > 7 else ""
-    data['agreement_no'] = str(header_data[12][0]) if len(header_data) > 12 else ""
-    data['work_order_amount'] = str(header_data[18][0]) if len(header_data) > 18 else "0"
+    # Assign to first page
+    first_page_data["header"] = header_data
     
-    # Extract dates from header
-    data['commencement_date'] = str(header_data[13][0]) if len(header_data) > 13 else ""
-    data['completion_date'] = str(header_data[15][0]) if len(header_data) > 15 else ""
-    data['actual_completion_date'] = str(header_data[16][0]) if len(header_data) > 16 else ""
-
-    # Process Work Order items
-    work_order_total = 0
+    # Work Order items
     last_row_wo = ws_wo.shape[0]
     for i in range(21, last_row_wo):
-        if i >= ws_bq.shape[0]:
-            continue
-            
         qty_raw = ws_bq.iloc[i, 3] if i < ws_bq.shape[0] and pd.notnull(ws_bq.iloc[i, 3]) else 0
-        rate_raw = ws_wo.iloc[i, 4] if pd.notnull(ws_wo.iloc[i, 4]) else 0
+        rate_raw = ws_wo.iloc[i, 4] if pd.notnull(ws_wo.iloc[i, 4]) else None
 
         qty = 0
         if isinstance(qty_raw, (int, float)):
@@ -293,6 +270,7 @@ def process_bill(ws_wo, ws_bq, ws_extra, premium_percent, premium_type):
             try:
                 qty = float(cleaned_qty)
             except ValueError:
+                _log_warn(f"Skipping invalid quantity at Bill Quantity row {i+1}: '{qty_raw}'")
                 qty = 0
 
         rate = 0
@@ -303,10 +281,8 @@ def process_bill(ws_wo, ws_bq, ws_extra, premium_percent, premium_type):
             try:
                 rate = float(cleaned_rate)
             except ValueError:
+                _log_warn(f"Skipping invalid rate at Work Order row {i+1}: '{rate_raw}'")
                 rate = 0
-
-        amount = round(qty * rate) if qty and rate else 0
-        work_order_total += amount
 
         item = {
             "serial_no": str(ws_wo.iloc[i, 0]) if pd.notnull(ws_wo.iloc[i, 0]) else "",
@@ -314,19 +290,31 @@ def process_bill(ws_wo, ws_bq, ws_extra, premium_percent, premium_type):
             "unit": str(ws_wo.iloc[i, 2]) if pd.notnull(ws_wo.iloc[i, 2]) else "",
             "quantity": qty,
             "rate": rate,
-            "amount": amount,
-            "remark": str(ws_wo.iloc[i, 6]) if pd.notnull(ws_wo.iloc[i, 6]) else ""
+            "remark": str(ws_wo.iloc[i, 6]) if pd.notnull(ws_wo.iloc[i, 6]) else "",
+            "amount": round(qty * rate) if qty and rate else 0,
+            "is_divider": False
         }
-        
-        data['work_order_items'].append(item)
-        data['items'].append(item)
+        first_page_data["items"].append(item)
 
-    # Process Extra Items
-    extra_items_total = 0
+    # Extra Items divider
+    first_page_data["items"].append({
+        "description": "Extra Items (With Premium)",
+        "bold": True,
+        "underline": True,
+        "amount": 0,
+        "quantity": 0,
+        "rate": 0,
+        "serial_no": "",
+        "unit": "",
+        "remark": "",
+        "is_divider": True
+    })
+
+    # Extra Items
     last_row_extra = ws_extra.shape[0]
     for j in range(6, last_row_extra):
         qty_raw = ws_extra.iloc[j, 3] if pd.notnull(ws_extra.iloc[j, 3]) else 0
-        rate_raw = ws_extra.iloc[j, 5] if pd.notnull(ws_extra.iloc[j, 5]) else 0
+        rate_raw = ws_extra.iloc[j, 5] if pd.notnull(ws_extra.iloc[j, 5]) else None
 
         qty = 0
         if isinstance(qty_raw, (int, float)):
@@ -336,6 +324,7 @@ def process_bill(ws_wo, ws_bq, ws_extra, premium_percent, premium_type):
             try:
                 qty = float(cleaned_qty)
             except ValueError:
+                _log_warn(f"Skipping invalid quantity at Extra Items row {j+1}: '{qty_raw}'")
                 qty = 0
 
         rate = 0
@@ -346,174 +335,223 @@ def process_bill(ws_wo, ws_bq, ws_extra, premium_percent, premium_type):
             try:
                 rate = float(cleaned_rate)
             except ValueError:
+                _log_warn(f"Skipping invalid rate at Extra Items row {j+1}: '{rate_raw}'")
                 rate = 0
 
-        amount = round(qty * rate) if qty and rate else 0
-        extra_items_total += amount
-
-        extra_item = {
+        item = {
             "serial_no": str(ws_extra.iloc[j, 0]) if pd.notnull(ws_extra.iloc[j, 0]) else "",
-            "bsr_no": str(ws_extra.iloc[j, 1]) if pd.notnull(ws_extra.iloc[j, 1]) else "",
             "description": str(ws_extra.iloc[j, 2]) if pd.notnull(ws_extra.iloc[j, 2]) else "",
-            "quantity": qty,
             "unit": str(ws_extra.iloc[j, 4]) if pd.notnull(ws_extra.iloc[j, 4]) else "",
+            "quantity": qty,
             "rate": rate,
-            "amount": amount,
-            "remarks": str(ws_extra.iloc[j, 7]) if pd.notnull(ws_extra.iloc[j, 7]) else ""
+            "remark": str(ws_extra.iloc[j, 1]) if pd.notnull(ws_extra.iloc[j, 1]) else "",
+            "amount": round(qty * rate) if qty and rate else 0,
+            "is_divider": False
         }
-        
-        data['extra_items'].append(extra_item)
+        first_page_data["items"].append(item)
+        extra_items_data["items"].append(item.copy())  # Copy for standalone Extra Items
 
-    # Calculate totals and deductions
-    grand_total = work_order_total + extra_items_total
-    
-    # Premium calculation
-    if premium_type == "Addition":
-        premium_amount = grand_total * (premium_percent / 100)
-        total_with_premium = grand_total + premium_amount
-    else:
-        premium_amount = grand_total * (premium_percent / 100)
-        total_with_premium = grand_total - premium_amount
-    
-    # Calculate deductions
-    sd_amount = int(total_with_premium * 0.10)  # 10% Security Deposit
-    it_amount = int(total_with_premium * 0.02)  # 2% Income Tax
-    gst_amount = int(total_with_premium * 0.02)  # 2% GST
-    lc_amount = int(total_with_premium * 0.01)   # 1% Labour Cess
-    
-    total_deductions = sd_amount + it_amount + gst_amount + lc_amount
-    net_payable = int(total_with_premium - total_deductions)
-    
-    # Store calculations
-    data['totals'] = {
-        'work_order_total': int(work_order_total),
-        'extra_items_total': int(extra_items_total),
-        'grand_total': int(grand_total),
-        'premium_amount': int(premium_amount),
-        'total_with_premium': int(total_with_premium),
-        'net_payable': net_payable
-    }
-    
-    data['deductions'] = {
-        'sd_amount': sd_amount,
-        'it_amount': it_amount,
-        'gst_amount': gst_amount,
-        'lc_amount': lc_amount,
-        'total_deductions': total_deductions
-    }
-    
-    data['calculations'] = {
-        'payable_amount': net_payable,
-        'amount_words': number_to_words(net_payable)
-    }
-    
-    # Certificate data
-    data['certificates'] = {
-        'measurement_officer': "Site Engineer",
-        'measurement_date': datetime.now().strftime("%d-%m-%Y"),
-        'measurement_book_page': "04-20",
-        'measurement_book_no': "887",
-        'preparing_officer_name': "Site Engineer",
-        'preparing_officer_date': datetime.now().strftime("%d-%m-%Y"),
-        'authorizing_officer_name': "Executive Engineer",
-        'authorizing_officer_date': datetime.now().strftime("%d-%m-%Y")
-    }
-    
-    # Note sheet specific data
-    work_order_amt = int(data.get('work_order_amount', '0').replace(',', '') if isinstance(data.get('work_order_amount', '0'), str) else data.get('work_order_amount', 0))
-    progress_percentage = (total_with_premium / work_order_amt * 100) if work_order_amt > 0 else 0
-    extra_item_percentage = (extra_items_total / work_order_amt * 100) if work_order_amt > 0 else 0
-    
-    data['note_sheet'] = {
-        'progress_percentage': progress_percentage,
-        'extra_item_status': "Yes" if extra_items_total > 0 else "No",
-        'extra_item_percentage': extra_item_percentage,
-        'approval_status': "under 5%, approval of the same is to be granted by this office" if extra_item_percentage < 5 else "more than 5% and Approval of the Deviation Case is required from the Superintending Engineer",
-        'work_completion_note': "Work was completed in time.",
-        'deviation_note': f"Requisite Deviation Statement is enclosed. The Overall Excess is {'more than 5% and Approval of the Deviation Case is required from the Superintending Engineer, PWD Electrical Circle, Udaipur' if progress_percentage > 105 else 'under acceptable limits'}."
-    }
-    
-    _log_debug(f"Processed bill data: {len(data['items'])} items, total: {data['totals']['net_payable']}")
-    return data
+    # Totals
+    data_items = [item for item in first_page_data["items"] if not item.get("is_divider", False)]
+    total_amount = round(sum(item.get("amount", 0) for item in data_items))
+    premium_amount = round(total_amount * (premium_percent / 100) if premium_type == "above" else -total_amount * (premium_percent / 100))
+    payable_amount = round(total_amount + premium_amount)
 
-def generate_html_from_template(template_name, data):
-    """Generate HTML content from template"""
+    first_page_data["totals"] = {
+        "grand_total": total_amount,
+        "premium": {"percent": premium_percent / 100, "type": premium_type, "amount": premium_amount},
+        "payable": payable_amount
+    }
+
     try:
-        template = env.get_template(template_name)
-        return template.render(data=data)
-    except Exception as e:
-        _log_warn(f"Error generating HTML from template {template_name}: {str(e)}")
-        return f"<html><body><h1>Error in {template_name}</h1><p>{str(e)}</p></body></html>"
+        extra_items_start = next(i for i, item in enumerate(first_page_data["items"]) if item.get("description") == "Extra Items (With Premium)")
+        extra_items = [item for item in first_page_data["items"][extra_items_start + 1:] if not item.get("is_divider", False)]
+        extra_items_sum = round(sum(item.get("amount", 0) for item in extra_items))
+        extra_items_premium = round(extra_items_sum * (premium_percent / 100) if premium_type == "above" else -extra_items_sum * (premium_percent / 100))
+        first_page_data["totals"]["extra_items_sum"] = extra_items_sum + extra_items_premium
+    except StopIteration:
+        first_page_data["totals"]["extra_items_sum"] = 0
 
-def create_pdf_from_html(html_content, filename):
-    """Create PDF from HTML content"""
+    # Last Page
+    last_page_data = {"payable_amount": payable_amount, "amount_words": number_to_words(payable_amount)}
+
+    # Deviation Statement
+    work_order_total = 0
+    executed_total = 0
+    overall_excess = 0
+    overall_saving = 0
+    for i in range(21, last_row_wo):
+        _log_debug(f"Processing deviation row {i+1}: wo_qty={ws_wo.iloc[i, 3]}, wo_rate={ws_wo.iloc[i, 4]}, bq_qty={ws_bq.iloc[i, 3] if i < ws_bq.shape[0] else 'N/A'}")
+        qty_wo_raw = ws_wo.iloc[i, 3] if pd.notnull(ws_wo.iloc[i, 3]) else 0
+        rate_raw = ws_wo.iloc[i, 4] if pd.notnull(ws_wo.iloc[i, 4]) else None
+        qty_bill_raw = ws_bq.iloc[i, 3] if i < ws_bq.shape[0] and pd.notnull(ws_bq.iloc[i, 3]) else 0
+
+        qty_wo = 0
+        if isinstance(qty_wo_raw, (int, float)):
+            qty_wo = float(qty_wo_raw)
+        elif isinstance(qty_wo_raw, str):
+            cleaned_qty_wo = qty_wo_raw.strip().replace(',', '').replace(' ', '')
+            try:
+                qty_wo = float(cleaned_qty_wo)
+            except ValueError:
+                _log_warn(f"Skipping invalid qty_wo at row {i+1}: '{qty_wo_raw}'")
+                qty_wo = 0
+
+        rate = 0
+        if isinstance(rate_raw, (int, float)):
+            rate = float(rate_raw)
+        elif isinstance(rate_raw, str):
+            cleaned_rate = rate_raw.strip().replace(',', '').replace(' ', '')
+            try:
+                rate = float(cleaned_rate)
+            except ValueError:
+                _log_warn(f"Skipping invalid rate at row {i+1}: '{rate_raw}'")
+                rate = 0
+
+        qty_bill = 0
+        if isinstance(qty_bill_raw, (int, float)):
+            qty_bill = float(qty_bill_raw)
+        elif isinstance(qty_bill_raw, str):
+            cleaned_qty_bill = qty_bill_raw.strip().replace(',', '').replace(' ', '')
+            try:
+                qty_bill = float(cleaned_qty_bill)
+            except ValueError:
+                _log_warn(f"Skipping invalid qty_bill at row {i+1}: '{qty_bill_raw}'")
+                qty_bill = 0
+
+        amt_wo = round(qty_wo * rate)
+        amt_bill = round(qty_bill * rate)
+        excess_qty = qty_bill - qty_wo if qty_bill > qty_wo else 0
+        excess_amt = round(excess_qty * rate)
+        saving_qty = qty_wo - qty_bill if qty_wo > qty_bill else 0
+        saving_amt = round(saving_qty * rate)
+
+        work_order_total += amt_wo
+        executed_total += amt_bill
+        overall_excess += excess_amt
+        overall_saving += saving_amt
+
+        item = {
+            "serial_no": str(ws_wo.iloc[i, 0]) if pd.notnull(ws_wo.iloc[i, 0]) else "",
+            "description": str(ws_wo.iloc[i, 1]) if pd.notnull(ws_wo.iloc[i, 1]) else "",
+            "unit": str(ws_wo.iloc[i, 2]) if pd.notnull(ws_wo.iloc[i, 2]) else "",
+            "qty_wo": qty_wo,
+            "rate": rate,
+            "amt_wo": amt_wo,
+            "qty_bill": qty_bill,
+            "amt_bill": amt_bill,
+            "excess_qty": excess_qty,
+            "excess_amt": excess_amt,
+            "saving_qty": saving_qty,
+            "saving_amt": saving_amt,
+            "remark": str(ws_wo.iloc[i, 6]) if pd.notnull(ws_wo.iloc[i, 6]) else ""
+        }
+        deviation_data["items"].append(item)
+
+    net_difference = round(executed_total - work_order_total)
+    
+    deviation_data["summary"] = {
+        "work_order_total": round(work_order_total),
+        "executed_total": round(executed_total),
+        "overall_excess": round(overall_excess),
+        "overall_saving": round(overall_saving),
+        "premium": {"percent": premium_percent / 100, "type": premium_type},
+        "net_difference": round(net_difference)
+    }
+
+    _log_debug("Prepared first_page_data items")
+    _log_debug("Prepared extra_items_data items")
+    _log_debug("Prepared deviation_data items")
+    return first_page_data, last_page_data, deviation_data, extra_items_data, note_sheet_data
+
+def generate_bill_notes(payable_amount, work_order_amount, extra_item_amount):
+    percentage_work_done = float(payable_amount / work_order_amount * 100) if work_order_amount > 0 else 0
+    serial_number = 1
+    note = []
+    note.append(f"{serial_number}. The work has been completed {percentage_work_done:.2f}% of the Work Order Amount.")
+    serial_number += 1
+    if percentage_work_done < 90:
+        note.append(f"{serial_number}. The execution of work at final stage is less than 90%...")
+        serial_number += 1
+    elif percentage_work_done > 100 and percentage_work_done <= 105:
+        note.append(f"{serial_number}. Requisite Deviation Statement is enclosed...")
+        serial_number += 1
+    elif percentage_work_done > 105:
+        note.append(f"{serial_number}. Requisite Deviation Statement is enclosed...")
+        serial_number += 1
+    note.append(f"{serial_number}. Quality Control (QC) test reports attached.")
+    serial_number += 1
+    if extra_item_amount > 0:
+        extra_item_percentage = float(extra_item_amount / work_order_amount * 100) if work_order_amount > 0 else 0
+        if extra_item_percentage > 5:
+            note.append(f"{serial_number}. The amount of Extra items is Rs. {extra_item_amount}...")
+        else:
+            note.append(f"{serial_number}. The amount of Extra items is Rs. {extra_item_amount}...")
+        serial_number += 1
+    note.append(f"{serial_number}. Please peruse above details for necessary decision-making.")
+    note.append("")
+    note.append("                                Premlata Jain")
+    note.append("                               AAO- As Auditor")
+    return {"notes": note}
+
+def generate_pdf(sheet_name, data, orientation, output_path):
+    _log_debug(f"Generating PDF for {sheet_name}")
     try:
-        if config is None:
-            return None
-        
+        template = env.get_template(f"{sheet_name.lower().replace(' ', '_')}.html")
+        html_content = template.render(data=data)
+        # Save HTML alongside PDF for consistency checks/comparison
+        try:
+            html_path = output_path[:-4] + ".html" if output_path.lower().endswith(".pdf") else output_path + ".html"
+            with open(html_path, "w", encoding="utf-8") as f:
+                f.write(html_content)
+        except Exception:
+            pass
         options = {
-            'page-size': 'A4',
-            'margin-top': '10mm',
-            'margin-right': '10mm',
-            'margin-bottom': '10mm',
-            'margin-left': '10mm',
-            'encoding': "UTF-8",
-            'no-outline': None,
-            'enable-local-file-access': None
+            "page-size": "A4",
+            "orientation": orientation,
+            "margin-top": "10mm",
+            "margin-bottom": "10mm",
+            "margin-left": "10mm",
+            "margin-right": "10mm",
+            "print-media-type": None,
+            "enable-local-file-access": None,
+            "disable-smart-shrinking": None,
+            "zoom": "1",
+            "dpi": 300,
         }
-        
-        temp_dir = get_temp_dir()
-        pdf_path = os.path.join(temp_dir, filename)
-        
-        pdfkit.from_string(html_content, pdf_path, options=options, configuration=config)
-        
-        if os.path.exists(pdf_path):
-            with open(pdf_path, 'rb') as f:
-                return f.read()
+        if config is None:
+            _log_warn("wkhtmltopdf missing; using xhtml2pdf fallback.")
+            try:
+                # Adjust layout for xhtml2pdf to avoid narrow content due to mm widths
+                fallback_html = html_content
+                for mm in ("190mm", "277mm"):
+                    fallback_html = fallback_html.replace(f"width: {mm}", "width: 100%")
+                    fallback_html = fallback_html.replace(f"max-width: {mm}", "width: 100%")
+                # Remove centered margin that can introduce side gaps
+                fallback_html = fallback_html.replace("margin: 0 auto;", "margin: 0;")
+                default_css = '@page { size: A4 %s; margin: 10mm; }' % ("landscape" if orientation=="landscape" else "portrait")
+                with open(output_path, "wb") as pdf_file:
+                    pisa.CreatePDF(src=fallback_html, dest=pdf_file, default_css=default_css)
+            except Exception:
+                _log_traceback()
+        else:
+            pdfkit.from_string(
+                html_content,
+                output_path,
+                configuration=config,
+                options=options
+            )
+        _log_debug(f"Finished PDF for {sheet_name}")
     except Exception as e:
-        _log_warn(f"Error creating PDF: {str(e)}")
+        st.error(f"Error generating PDF for {sheet_name}: {str(e)}")
         _log_traceback()
-    return None
-
-def create_docx_from_html(html_content, filename):
-    """Create DOCX from HTML content (basic conversion)"""
-    try:
-        doc = Document()
-        
-        # Set margins to 10mm (converted to inches: 10mm ≈ 0.394 inches)
-        sections = doc.sections
-        for section in sections:
-            section.top_margin = Mm(10)
-            section.bottom_margin = Mm(10)
-            section.left_margin = Mm(10)
-            section.right_margin = Mm(10)
-        
-        # Simple HTML to DOCX conversion (basic text extraction)
-        import re
-        text_content = re.sub('<[^<]+?>', '', html_content)
-        lines = text_content.split('\n')
-        
-        for line in lines:
-            if line.strip():
-                doc.add_paragraph(line.strip())
-        
-        temp_dir = get_temp_dir()
-        docx_path = os.path.join(temp_dir, filename)
-        doc.save(docx_path)
-        
-        if os.path.exists(docx_path):
-            with open(docx_path, 'rb') as f:
-                return f.read()
-    except Exception as e:
-        _log_warn(f"Error creating DOCX: {str(e)}")
-        _log_traceback()
-    return None
+        raise
 
 def main():
     st.title("Government Bill Generator")
     
     # File upload
-    uploaded_file = st.file_uploader("Upload Excel file", type=['xlsx', 'xls'])
+    uploaded_file = st.file_uploader("Choose an Excel file", type=['xlsx', 'xls'])
     
     if uploaded_file is None:
         _render_landing()
@@ -539,22 +577,31 @@ def main():
             
             # Process the bill
             with st.spinner("Processing bill data..."):
-                data = process_bill(ws_wo, ws_bq, ws_extra, premium_percent, premium_type)
-            
-            # Generate documents
-            templates = [
-                ("first_page.html", "First_Page"),
-                ("certificate_ii.html", "Certificate_II"),
-                ("certificate_iii.html", "Certificate_III"),
-                ("deviation_statement.html", "Deviation_Statement"),
-                ("extra_items.html", "Extra_Items"),
-                ("note_sheet.html", "Note_Sheet")
-            ]
+                first_page_data, last_page_data, deviation_data, extra_items_data, note_sheet_data = process_bill(ws_wo, ws_bq, ws_extra, premium_percent, premium_type)
             
             st.success("Bill processed successfully!")
             
             # Create download section
             st.subheader("Download Generated Documents")
+            
+            # Convert data for templates
+            templates_data = {
+                "first_page": {"bill_items": first_page_data["items"], "header": first_page_data["header"], "totals": first_page_data["totals"]},
+                "certificate_ii": {"measurement_officer": "Site Engineer", "measurement_date": datetime.now().strftime("%d-%m-%Y"), "measurement_book_page": "04-20", "measurement_book_no": "887", "officer_name": "Site Engineer", "officer_designation": "Assistant Engineer", "authorising_officer_name": "Executive Engineer", "authorising_officer_designation": "Executive Engineer"},
+                "certificate_iii": {"totals": first_page_data["totals"], "payable_words": last_page_data["amount_words"], "current_date": datetime.now()},
+                "deviation_statement": deviation_data,
+                "extra_items": extra_items_data,
+                "note_sheet": generate_bill_notes(first_page_data["totals"]["payable"], 1000000, sum(item.get("amount", 0) for item in extra_items_data["items"]))
+            }
+            
+            templates = [
+                ("first_page", "First_Page"),
+                ("certificate_ii", "Certificate_II"),
+                ("certificate_iii", "Certificate_III"),
+                ("deviation_statement", "Deviation_Statement"),
+                ("extra_items", "Extra_Items"),
+                ("note_sheet", "Note_Sheet")
+            ]
             
             for template_name, doc_name in templates:
                 col1, col2 = st.columns(2)
@@ -562,47 +609,65 @@ def main():
                 with col1:
                     if st.button(f"Generate PDF - {doc_name}"):
                         with st.spinner(f"Generating {doc_name} PDF..."):
-                            html_content = generate_html_from_template(template_name, data)
-                            pdf_content = create_pdf_from_html(html_content, f"{doc_name}.pdf")
-                            
-                            if pdf_content:
-                                st.download_button(
-                                    label=f"Download {doc_name} PDF",
-                                    data=pdf_content,
-                                    file_name=f"{doc_name}.pdf",
-                                    mime="application/pdf"
-                                )
-                            else:
-                                st.error(f"Failed to generate {doc_name} PDF")
+                            try:
+                                template = env.get_template(f"{template_name}.html")
+                                html_content = template.render(data=templates_data[template_name])
+                                
+                                if config:
+                                    temp_dir = get_temp_dir()
+                                    pdf_path = os.path.join(temp_dir, f"{doc_name}.pdf")
+                                    
+                                    options = {
+                                        'page-size': 'A4',
+                                        'margin-top': '10mm',
+                                        'margin-right': '10mm',
+                                        'margin-bottom': '10mm',
+                                        'margin-left': '10mm',
+                                        'encoding': "UTF-8",
+                                        'no-outline': None,
+                                        'enable-local-file-access': None
+                                    }
+                                    
+                                    pdfkit.from_string(html_content, pdf_path, options=options, configuration=config)
+                                    
+                                    if os.path.exists(pdf_path):
+                                        with open(pdf_path, 'rb') as f:
+                                            pdf_content = f.read()
+                                        
+                                        st.download_button(
+                                            label=f"Download {doc_name} PDF",
+                                            data=pdf_content,
+                                            file_name=f"{doc_name}.pdf",
+                                            mime="application/pdf"
+                                        )
+                                    else:
+                                        st.error(f"Failed to generate {doc_name} PDF")
+                                else:
+                                    st.error("PDF generation not available - wkhtmltopdf not found")
+                            except Exception as e:
+                                st.error(f"Error generating {doc_name}: {str(e)}")
                 
                 with col2:
-                    if st.button(f"Generate DOCX - {doc_name}"):
-                        with st.spinner(f"Generating {doc_name} DOCX..."):
-                            html_content = generate_html_from_template(template_name, data)
-                            docx_content = create_docx_from_html(html_content, f"{doc_name}.docx")
+                    if st.button(f"Generate HTML - {doc_name}"):
+                        try:
+                            template = env.get_template(f"{template_name}.html")
+                            html_content = template.render(data=templates_data[template_name])
                             
-                            if docx_content:
-                                st.download_button(
-                                    label=f"Download {doc_name} DOCX",
-                                    data=docx_content,
-                                    file_name=f"{doc_name}.docx",
-                                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                                )
-                            else:
-                                st.error(f"Failed to generate {doc_name} DOCX")
+                            st.download_button(
+                                label=f"Download {doc_name} HTML",
+                                data=html_content,
+                                file_name=f"{doc_name}.html",
+                                mime="text/html"
+                            )
+                        except Exception as e:
+                            st.error(f"Error generating {doc_name}: {str(e)}")
             
             # Display summary
             with st.expander("Bill Summary", expanded=True):
-                st.write(f"**Contractor:** {data.get('contractor_name', 'N/A')}")
-                st.write(f"**Work:** {data.get('work_name', 'N/A')}")
-                st.write(f"**Agreement No:** {data.get('agreement_no', 'N/A')}")
-                st.write(f"**Work Order Amount:** ₹{data['totals']['work_order_total']:,}")
-                st.write(f"**Extra Items:** ₹{data['totals']['extra_items_total']:,}")
-                st.write(f"**Premium ({premium_percent}% {premium_type}):** ₹{data['totals']['premium_amount']:,}")
-                st.write(f"**Total with Premium:** ₹{data['totals']['total_with_premium']:,}")
-                st.write(f"**Total Deductions:** ₹{data['deductions']['total_deductions']:,}")
-                st.write(f"**Net Payable:** ₹{data['totals']['net_payable']:,}")
-                st.write(f"**Amount in Words:** {data['calculations']['amount_words']}")
+                st.write(f"**Total Amount:** ₹{first_page_data['totals']['grand_total']:,}")
+                st.write(f"**Premium ({premium_percent}% {premium_type}):** ₹{first_page_data['totals']['premium']['amount']:,}")
+                st.write(f"**Payable Amount:** ₹{first_page_data['totals']['payable']:,}")
+                st.write(f"**Amount in Words:** {last_page_data['amount_words']}")
         
         except Exception as e:
             st.error(f"Error processing file: {str(e)}")
