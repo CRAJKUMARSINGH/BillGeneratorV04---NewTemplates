@@ -681,13 +681,96 @@ def main():
             st.success("Bill processed successfully!")
             
             # Convert data for templates and store in session
+            # Compute derived totals and deductions used by templates
+            extra_items_total = first_page_data["totals"].get("extra_items_sum", 0)
+            total_with_premium = first_page_data["totals"].get("payable", 0)
+            
+            # Deductions (default policy)
+            sd_pct, it_pct, gst_pct, lc_pct = 0.10, 0.02, 0.02, 0.01
+            sd_amount = round(total_with_premium * sd_pct)
+            it_amount = round(total_with_premium * it_pct)
+            gst_amount = round(total_with_premium * gst_pct)
+            lc_amount = round(total_with_premium * lc_pct)
+            total_deductions = sd_amount + it_amount + gst_amount + lc_amount
+            net_payable = max(total_with_premium - total_deductions, 0)
+            
+            expanded_totals = dict(first_page_data["totals"])
+            expanded_totals.update({
+                "total_with_premium": total_with_premium,
+                "extra_items_total": extra_items_total,
+                "net_payable": net_payable,
+                # Duplicate deductions under totals for LaTeX templates expecting totals.sd_amount
+                "sd_amount": sd_amount,
+                "it_amount": it_amount,
+                "gst_amount": gst_amount,
+                "lc_amount": lc_amount,
+                "total_deductions": total_deductions,
+            })
+            
+            deductions = {
+                "sd_amount": sd_amount,
+                "it_amount": it_amount,
+                "gst_amount": gst_amount,
+                "lc_amount": lc_amount,
+                "total_deductions": total_deductions,
+            }
+            
+            # Placeholders for metadata required by some templates
+            work_order_amount = 1000000
+            progress_percentage = float(total_with_premium / work_order_amount * 100) if work_order_amount > 0 else 0.0
+            extra_item_percentage = float(extra_items_total / work_order_amount * 100) if work_order_amount > 0 else 0.0
+            note_sheet_meta = {
+                "progress_percentage": progress_percentage,
+                "deviation_note": "Requisite Deviation Statement is enclosed where applicable.",
+                "work_completion_note": "Work executed as per specifications and contract.",
+                "extra_item_percentage": extra_item_percentage,
+                "approval_status": "Approval required" if extra_item_percentage > 5 else "Within limit",
+                "extra_item_status": "Yes" if extra_items_total > 0 else "No",
+            }
+            
             templates_data = {
-                "first_page": {"bill_items": first_page_data["items"], "header": first_page_data["header"], "totals": first_page_data["totals"]},
-                "certificate_ii": {"measurement_officer": "Site Engineer", "measurement_date": datetime.now().strftime("%d-%m-%Y"), "measurement_book_page": "04-20", "measurement_book_no": "887", "officer_name": "Site Engineer", "officer_designation": "Assistant Engineer", "authorising_officer_name": "Executive Engineer", "authorising_officer_designation": "Executive Engineer"},
-                "certificate_iii": {"totals": first_page_data["totals"], "payable_words": last_page_data["amount_words"], "current_date": datetime.now()},
+                # Keep existing shape for first_page; include expanded totals
+                "first_page": {
+                    "bill_items": first_page_data["items"],
+                    "header": first_page_data["header"],
+                    "totals": expanded_totals,
+                    # Provide optional fields commonly referenced by first_page.html (best-effort)
+                    "extra_items": extra_items_data.get("items", []),
+                    "extra_items_sum": extra_items_total,
+                    "tender_premium_percent": first_page_data["totals"].get("premium", {}).get("percent", 0),
+                },
+                "certificate_ii": {
+                    "measurement_officer": "Site Engineer",
+                    "measurement_date": datetime.now().strftime("%d-%m-%Y"),
+                    "measurement_book_page": "04-20",
+                    "measurement_book_no": "887",
+                    "officer_name": "Site Engineer",
+                    "officer_designation": "Assistant Engineer",
+                    "authorising_officer_name": "Executive Engineer",
+                    "authorising_officer_designation": "Executive Engineer"
+                },
+                "certificate_iii": {
+                    "totals": expanded_totals,
+                    "deductions": deductions,
+                    "calculations": {"amount_words": last_page_data["amount_words"]},
+                    "payable_words": last_page_data["amount_words"],
+                    "current_date": datetime.now()
+                },
                 "deviation_statement": deviation_data,
                 "extra_items": extra_items_data,
-                "note_sheet": generate_bill_notes(first_page_data["totals"]["payable"], 1000000, sum(item.get("amount", 0) for item in extra_items_data["items"]))
+                "note_sheet": {
+                    "agreement_no": "",
+                    "work_name": "",
+                    "contractor_name": "",
+                    "commencement_date": "",
+                    "completion_date": "",
+                    "actual_completion_date": "",
+                    "work_order_amount": work_order_amount,
+                    "totals": expanded_totals,
+                    "deductions": deductions,
+                    "note_sheet": note_sheet_meta,
+                    "current_date": datetime.now().strftime("%d-%m-%Y"),
+                },
             }
             
             st.session_state["templates_data"] = templates_data
