@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>II. Certificate and Signatures</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 15mm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            line-height: 1.3;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 20px;
+        }
+        .signatures {
+            margin-top: 30px;
+        }
+        .signature-block {
+            display: inline-block;
+            width: 45%;
+            vertical-align: top;
+            margin: 10px;
+        }
+        .bold {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>II. Certificate and Signatures</h2>
+        <p>Government Document Template</p>
+        <hr>
+    </div>
+
+    <div class="content">
+        <h3 style="text-align: center;">CERTIFICATION OF WORK EXECUTED</h3>
+        
+        <p>The measurements on which are based the entries in columns 1 to 6 of Account I, were made by <strong>{{ data.certificates.measurement_officer or "Site Engineer" }}</strong> on <strong>{{ data.certificates.measurement_date or "Date" }}</strong>, and are recorded at page <strong>{{ data.certificates.measurement_book_page or "04-20" }}</strong> of Measurement Book No. <strong>{{ data.certificates.measurement_book_no or "887" }}</strong>.</p>
+        
+        <p><em>*Certified</em> that in addition to and quite apart from the quantities of work actually executed, as shown in column 4 of Account I, some work has actually been done in connection with several items and the value of such work (after deduction therefrom the proportionate amount of secured advances, if any, ultimately recoverable on account of the quantities of materials used therein) is in no case, less than the advance payments as per item 2 of the Memorandum.</p>
+        
+        <p><em>+Certified</em> that the contractor has made satisfactory progress with the work, and that the quantities and amounts claimed are correct and the work has been executed in accordance with the specifications and the terms of the contract.</p>
+        
+        <p>I also certify that the amount claimed is not more than the amount admissible under the contract.</p>
+    </div>
+
+    <div class="signatures">
+        <div class="signature-block">
+            <p style="text-align: center;"><strong>Dated signature of officer preparing the bill</strong></p>
+            <p><strong>{{ data.certificates.preparing_officer_name or "Site Engineer" }}</strong></p>
+            <p><strong>{{ data.certificates.preparing_officer_date or "Date" }}</strong></p>
+        </div>
+        
+        <div class="signature-block">
+            <p style="text-align: center;"><strong>+Dated signature of officer authorising payment</strong></p>
+            <p><strong>{{ data.certificates.authorizing_officer_name or "Executive Engineer" }}</strong></p>
+            <p><strong>{{ data.certificates.authorizing_officer_date or "Date" }}</strong></p>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <hr>
+        <p><small>This document was converted from HTML template: <code>certificate_ii.html</code></small></p>
+        <p><small>Converted to LaTeX format for professional government document generation</small></p>
+        <p><small>Compilation date: {{ data.current_date or "Today" }}</small></p>
+    </div>
+</body>
+</html>

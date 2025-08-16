@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Government Contractor Bill Template</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 10mm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            line-height: 1.2;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 2px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .bold {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Government Contractor Bill Template</h2>
+        <p>Government Document Template</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Item No.</th>
+                <th>Item of Work supplies (Grouped under "sub-head" and "sub work" of estimate)</th>
+                <th>Unit</th>
+                <th>Quantity executed (or supplied) since last certificate</th>
+                <th>Quantity executed (or supplied) upto date as per MB</th>
+                <th>Rate</th>
+                <th>Amount upto date</th>
+                <th>Amount Since previous bill (Total for each sub-head)</th>
+                <th>Remark</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data.items %}
+            <tr>
+                <td>{{ item.serial_no }}</td>
+                <td>{{ item.description }}</td>
+                <td>{{ item.unit }}</td>
+                <td>{{ "%.2f"|format(item.quantity) }}</td>
+                <td>{{ "%.2f"|format(item.quantity * 2) }}</td>
+                <td>{{ "%.2f"|format(item.rate) }}</td>
+                <td>{{ "%.2f"|format(item.amount) }}</td>
+                <td>{{ "%.2f"|format(item.amount / 2) }}</td>
+                <td>{{ item.remark }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <hr>
+        <p><small>This document was converted from HTML template: <code>bill_template.html</code></small></p>
+        <p><small>Converted to LaTeX format for professional government document generation</small></p>
+        <p><small>Compilation date: {{ data.current_date or "Today" }}</small></p>
+    </div>
+</body>
+</html>

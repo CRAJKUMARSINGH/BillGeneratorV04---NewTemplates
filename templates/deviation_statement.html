@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Deviation Statement</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 15mm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 9px;
+            line-height: 1.2;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 2px;
+            text-align: center;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            font-size: 8px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .bold {
+            font-weight: bold;
+        }
+        .summary-table {
+            margin-top: 20px;
+        }
+        .summary-table td {
+            text-align: left;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Deviation Statement</h2>
+        <p>Government Document Template</p>
+        <hr>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ITEM No.</th>
+                <th>Description</th>
+                <th>Unit</th>
+                <th>Qty as per Work Order</th>
+                <th>Rate</th>
+                <th>Amt as per Work Order Rs.</th>
+                <th>Qty Executed</th>
+                <th>Amt as per Executed Rs.</th>
+                <th>Excess Qty</th>
+                <th>Excess Amt Rs.</th>
+                <th>Saving Qty</th>
+                <th>Saving Amt Rs.</th>
+                <th>Remarks</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data.work_order_items %}
+            {% set excess_qty = item.quantity - (item.quantity * 0.8) %}
+            {% set excess_amt = excess_qty * item.rate %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ item.description }}</td>
+                <td>{{ item.unit }}</td>
+                <td>{{ "%.2f"|format(item.quantity * 0.8) }}</td>
+                <td>{{ "%.2f"|format(item.rate) }}</td>
+                <td>{{ "%.2f"|format(item.quantity * 0.8 * item.rate) }}</td>
+                <td>{{ "%.2f"|format(item.quantity) }}</td>
+                <td>{{ "%.2f"|format(item.amount) }}</td>
+                <td>{{ "%.2f"|format(excess_qty) }}</td>
+                <td>{{ "%.2f"|format(excess_amt) }}</td>
+                <td>0.00</td>
+                <td>0.00</td>
+                <td>{{ item.remark }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="summary-table">
+        <tr>
+            <td width="60%">Grand Total Rs.</td>
+            <td width="10%"><strong>{{ "%.2f"|format(data.totals.work_order_total * 0.8) }}</strong></td>
+            <td width="10%"><strong>{{ "%.2f"|format(data.totals.work_order_total) }}</strong></td>
+            <td width="10%"><strong>{{ "%.2f"|format(data.totals.work_order_total * 0.2) }}</strong></td>
+            <td width="10%"><strong>0.00</strong></td>
+        </tr>
+        <tr>
+            <td>Add Tender Premium (<strong>{{ "%.2f"|format(data.premium_percent) }}%</strong>)</td>
+            <td><strong>{{ "%.2f"|format(data.totals.work_order_total * 0.8 * data.premium_percent / 100) }}</strong></td>
+            <td><strong>{{ "%.2f"|format(data.totals.premium_amount) }}</strong></td>
+            <td><strong>{{ "%.2f"|format(data.totals.premium_amount * 0.2) }}</strong></td>
+            <td><strong>0.00</strong></td>
+        </tr>
+        <tr>
+            <td>Grand Total including Tender Premium Rs.</td>
+            <td><strong>{{ "%.2f"|format((data.totals.work_order_total * 0.8) + (data.totals.work_order_total * 0.8 * data.premium_percent / 100)) }}</strong></td>
+            <td><strong>{{ "%.2f"|format(data.totals.total_with_premium - data.totals.extra_items_total) }}</strong></td>
+            <td><strong>{{ "%.2f"|format((data.totals.total_with_premium - data.totals.extra_items_total) * 0.2) }}</strong></td>
+            <td><strong>0.00</strong></td>
+        </tr>
+        <tr>
+            <td>Overall <strong>{{ "Excess" if data.totals.total_with_premium > (data.totals.work_order_total or 1) else "Saving" }}</strong> With Respect to the Work Order Amount Rs.</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td><strong>{{ "%.2f"|format(abs(data.totals.total_with_premium - (data.totals.work_order_total or 0))) }}</strong></td>
+        </tr>
+        <tr>
+            <td>Percentage of Deviation %</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td><strong>{{ "%.2f"|format(abs((data.totals.total_with_premium - (data.totals.work_order_total or 1)) / (data.totals.work_order_total or 1) * 100)) }}%</strong></td>
+        </tr>
+    </table>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <hr>
+        <p><small>This document was converted from HTML template: <code>deviation_statement.html</code></small></p>
+        <p><small>Converted to LaTeX format for professional government document generation</small></p>
+        <p><small>Compilation date: {{ data.current_date or "Today" }}</small></p>
+    </div>
+</body>
+</html>

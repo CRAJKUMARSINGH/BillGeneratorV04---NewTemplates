@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Extra Items</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 15mm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            line-height: 1.2;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 3px;
+            text-align: center;
+            vertical-align: top;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .bold {
+            font-weight: bold;
+        }
+        .text-left {
+            text-align: left;
+        }
+        .total-row {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Extra Items</h2>
+        <p>Government Document Template</p>
+        <hr>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>S.No.</th>
+                <th>Ref. BSR No.</th>
+                <th>Particulars</th>
+                <th>Qty.</th>
+                <th>Unit</th>
+                <th>Rate</th>
+                <th>Amount</th>
+                <th>Remarks</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if data.extra_items %}
+                {% for item in data.extra_items %}
+                <tr>
+                    <td class="bold">{{ item.serial_no }}</td>
+                    <td class="bold">{{ item.bsr_no }}</td>
+                    <td class="bold text-left">{{ item.description }}</td>
+                    <td class="bold">{{ item.quantity }}</td>
+                    <td class="bold">{{ item.unit }}</td>
+                    <td class="bold">{{ item.rate }}</td>
+                    <td class="bold">{{ item.amount }}</td>
+                    <td class="bold">{{ item.remarks }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="8">No extra items</td>
+                </tr>
+            {% endif %}
+        </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="6" class="text-left bold">Grand Total</td>
+                <td class="bold">{{ data.totals.extra_items_total or 0 }}</td>
+                <td></td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="6" class="text-left bold">Tender Premium @ {{ data.premium_percent }}% {{ data.premium_type }}</td>
+                <td class="bold">{{ "%.0f"|format((data.totals.extra_items_total or 0) * (data.premium_percent or 0) / 100) }}</td>
+                <td></td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="6" class="text-left bold">Total Amount of Extra Item Executed</td>
+                <td class="bold">{{ "%.0f"|format((data.totals.extra_items_total or 0) + ((data.totals.extra_items_total or 0) * (data.premium_percent or 0) / 100)) }}</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <hr>
+        <p><small>This document was converted from HTML template: <code>extra_items.html</code></small></p>
+        <p><small>Converted to LaTeX format for professional government document generation</small></p>
+        <p><small>Compilation date: {{ data.current_date or "Today" }}</small></p>
+    </div>
+</body>
+</html>

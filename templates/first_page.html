@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>First Page</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 10mm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 9px;
+            line-height: 1.1;
+        }
+        .header-section {
+            margin-bottom: 15px;
+        }
+        .header-title {
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .header-subtitle {
+            text-align: center;
+            font-size: 10px;
+            margin-bottom: 15px;
+        }
+        .header-info {
+            display: block;
+            margin-bottom: 2px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 2px;
+            text-align: left;
+            vertical-align: top;
+            font-size: 8px;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .amount-cell {
+            text-align: right;
+        }
+        .divider-row {
+            background-color: #e0e0e0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .total-section {
+            margin-top: 10px;
+            text-align: right;
+        }
+        .bold {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-section">
+        <div class="header-title">CONTRACTOR BILL</div>
+        <div class="header-subtitle">FOR CONTRACTORS & SUPPLIERS ONLY FOR PAYMENT FOR WORK OR SUPPLIES ACTUALLY MEASURED</div>
+        
+        {% if data.header %}
+            {% for row in data.header %}
+                {% if row and row[0] %}
+                    <div class="header-info">{{ row[0] }}{% if row|length > 1 and row[1] %}: {{ row[1] }}{% endif %}</div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+        
+        <div class="header-info"><strong>WORK ORDER AMOUNT RS. {{ data.work_order_amount or "0" }}</strong></div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Item No.</th>
+                <th>Item of Work supplies (Grouped under "sub-head" and "sub work" of estimate)</th>
+                <th>Unit</th>
+                <th>Quantity executed (or supplied) since last certificate</th>
+                <th>Quantity executed (or supplied) upto date as per MB</th>
+                <th>Rate</th>
+                <th>Amount upto date</th>
+                <th>Amount Since previous bill (Total for each sub-head)</th>
+                <th>Remark</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data.items %}
+                {% if item.get('is_divider') %}
+                    <tr class="divider-row">
+                        <td colspan="9">{{ item.description }}</td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td>{{ item.serial_no }}</td>
+                        <td>{{ item.description }}</td>
+                        <td>{{ item.unit }}</td>
+                        <td class="amount-cell">{{ "%.1f"|format(item.quantity) if item.quantity else "" }}</td>
+                        <td class="amount-cell">{{ "%.1f"|format(item.quantity) if item.quantity else "" }}</td>
+                        <td class="amount-cell">{{ "%.1f"|format(item.rate) if item.rate else "" }}</td>
+                        <td class="amount-cell">{{ item.amount if item.amount else "" }}</td>
+                        <td class="amount-cell">{{ item.amount if item.amount else "" }}</td>
+                        <td>{{ item.remark }}</td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="total-section">
+        <div><strong>Grand Total Rs. {{ data.totals.grand_total or 0 }}</strong></div>
+        <div><strong>Tender Premium @ {{ data.premium_percent or 0 }}% {{ data.totals.premium_amount or 0 }}</strong></div>
+        <div><strong>Sum of Extra Items (including Tender Premium) (See on Left) Rs. {{ data.totals.extra_items_total or 0 }}</strong></div>
+        <div class="bold" style="font-size: 12px;"><strong>Payable Amount Rs. {{ data.totals.net_payable or 0 }}</strong></div>
+    </div>
+</body>
+</html>
