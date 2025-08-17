@@ -680,6 +680,7 @@ def main():
             
             st.success("Bill processed successfully!")
             
+<<<<<<< HEAD
             # Convert data for templates and store in session
             templates_data = {
                 "first_page": {"bill_items": first_page_data["items"], "header": first_page_data["header"], "totals": first_page_data["totals"]},
@@ -692,6 +693,130 @@ def main():
             
             st.session_state["templates_data"] = templates_data
             
+=======
+            # Compute derived totals and deductions used by templates
+            # Identify main vs extra items
+            items = first_page_data["items"]
+            divider_index = None
+            for idx, it in enumerate(items):
+                if it.get("is_divider") and it.get("description") == "Extra Items (With Premium)":
+                    divider_index = idx
+                    break
+            main_items = items[:divider_index] if divider_index is not None else [it for it in items if not it.get("is_divider", False)]
+            extra_items_only = items[divider_index + 1:] if divider_index is not None else []
+            
+            # Base totals
+            bill_total = round(sum(it.get("amount", 0) for it in main_items))
+            extra_items_base = round(sum(it.get("amount", 0) for it in extra_items_only))
+            
+            # Premium
+            premium_fraction = float(premium_percent) / 100.0
+            is_addition = str(premium_type).lower().startswith("a")  # Addition vs Deduction
+            signed = 1 if is_addition else -1
+            bill_premium = round(bill_total * premium_fraction * signed)
+            extra_premium = round(extra_items_base * premium_fraction * signed)
+            
+            bill_grand_total = bill_total + bill_premium
+            extra_items_total = extra_items_base + extra_premium
+            total_with_premium = bill_grand_total + extra_items_total
+            
+            # Deductions (default policy)
+            sd_pct, it_pct, gst_pct, lc_pct = 0.10, 0.02, 0.02, 0.01
+            sd_amount = round(total_with_premium * sd_pct)
+            it_amount = round(total_with_premium * it_pct)
+            gst_amount = round(total_with_premium * gst_pct)
+            lc_amount = round(total_with_premium * lc_pct)
+            total_deductions = sd_amount + it_amount + gst_amount + lc_amount
+            net_payable = max(total_with_premium - total_deductions, 0)
+            
+            expanded_totals = dict(first_page_data["totals"])
+            expanded_totals.update({
+                # Derived rollups used by several templates
+                "total_with_premium": total_with_premium,
+                "extra_items_total": extra_items_total,
+                "net_payable": net_payable,
+                # Duplicate deductions under totals for LaTeX templates expecting totals.sd_amount
+                "sd_amount": sd_amount,
+                "it_amount": it_amount,
+                "gst_amount": gst_amount,
+                "lc_amount": lc_amount,
+                "total_deductions": total_deductions,
+            })
+            
+            deductions = {
+                "sd_amount": sd_amount,
+                "it_amount": it_amount,
+                "gst_amount": gst_amount,
+                "lc_amount": lc_amount,
+                "total_deductions": total_deductions,
+            }
+            
+            # Placeholders for metadata required by some templates
+            work_order_amount = 1000000
+            progress_percentage = float(total_with_premium / work_order_amount * 100) if work_order_amount > 0 else 0.0
+            extra_item_percentage = float(extra_items_total / work_order_amount * 100) if work_order_amount > 0 else 0.0
+            note_sheet_meta = {
+                "progress_percentage": progress_percentage,
+                "deviation_note": "Requisite Deviation Statement is enclosed where applicable.",
+                "work_completion_note": "Work executed as per specifications and contract.",
+                "extra_item_percentage": extra_item_percentage,
+                "approval_status": "Approval required" if extra_item_percentage > 5 else "Within limit",
+                "extra_item_status": "Yes" if extra_items_total > 0 else "No",
+            }
+            
+            templates_data = {
+                # Keep existing shape for first_page; include expanded totals
+                "first_page": {
+                    "bill_items": first_page_data["items"],
+                    "header": first_page_data["header"],
+                    "totals": expanded_totals,
+                    # Provide fields used by first_page.html and .tex
+                    "bill_total": bill_total,
+                    "bill_premium": bill_premium,
+                    "bill_grand_total": bill_grand_total,
+                    "extra_items": extra_items_data.get("items", []),
+                    "extra_items_base": extra_items_base,
+                    "extra_premium": extra_premium,
+                    "extra_items_sum": extra_items_total,
+                    "tender_premium_percent": premium_fraction,
+                },
+                "certificate_ii": {
+                    "measurement_officer": "Site Engineer",
+                    "measurement_date": datetime.now().strftime("%d-%m-%Y"),
+                    "measurement_book_page": "04-20",
+                    "measurement_book_no": "887",
+                    "officer_name": "Site Engineer",
+                    "officer_designation": "Assistant Engineer",
+                    "authorising_officer_name": "Executive Engineer",
+                    "authorising_officer_designation": "Executive Engineer"
+                },
+                "certificate_iii": {
+                    "totals": expanded_totals,
+                    "deductions": deductions,
+                    "calculations": {"amount_words": last_page_data["amount_words"]},
+                    "payable_words": last_page_data["amount_words"],
+                    "current_date": datetime.now()
+                },
+                "deviation_statement": deviation_data,
+                "extra_items": extra_items_data,
+                "note_sheet": {
+                    "agreement_no": "",
+                    "work_name": "",
+                    "contractor_name": "",
+                    "commencement_date": "",
+                    "completion_date": "",
+                    "actual_completion_date": "",
+                    "work_order_amount": work_order_amount,
+                    "totals": expanded_totals,
+                    "deductions": deductions,
+                    "note_sheet": note_sheet_meta,
+                    "current_date": datetime.now().strftime("%d-%m-%Y"),
+                },
+            }
+            
+            st.session_state["templates_data"] = templates_data
+            
+>>>>>>> 3987d94bf8947dde557f9dbc0125c7ece8ab0f3f
             # Clear previously generated byte caches to avoid stale downloads
             keys_to_delete = [
                 key for key in list(st.session_state.keys())
@@ -769,6 +894,7 @@ def main():
                         if st.button(f"Generate PDF (HTML) - {doc_name}", key=f"gen_pdf_html_{template_name}"):
                             try:
                                 with st.spinner(f"Generating {doc_name} PDF from HTML..."):
+<<<<<<< HEAD
                                     # Generate HTML content
                                     template = env.get_template(f"{template_name}.html")
                                     html_content = template.render(data=templates_data[template_name])
@@ -811,14 +937,46 @@ def main():
                         st.error("PDF generation not available (wkhtmltopdf not configured)")
                     
                     # Show download button if PDF is ready
+=======
+                                    template = env.get_template(f"{template_name}.html")
+                                    html_content = template.render(data=templates_data[template_name])
+                                    temp_dir = get_temp_dir()
+                                    pdf_path = os.path.join(temp_dir, f"{doc_name}.pdf")
+                                    options = {
+                                        'page-size': 'A4',
+                                        'margin-top': '10mm',
+                                        'margin-right': '10mm',
+                                        'margin-bottom': '10mm',
+                                        'margin-left': '10mm',
+                                        'encoding': "UTF-8",
+                                        'no-outline': None,
+                                        'enable-local-file-access': None
+                                    }
+                                    pdfkit.from_string(html_content, pdf_path, options=options, configuration=config)
+                                    if os.path.exists(pdf_path):
+                                        with open(pdf_path, 'rb') as f:
+                                            st.session_state[f"pdf_html_bytes_{template_name}"] = f.read()
+                                        st.success("PDF ready. Use the download button below.")
+                                    else:
+                                        st.error(f"Failed to generate {doc_name} PDF")
+                            except Exception as e:
+                                st.error(f"Error: {str(e)}")
+                    else:
+                        st.error("PDF generation not available")
+                    
+>>>>>>> 3987d94bf8947dde557f9dbc0125c7ece8ab0f3f
                     if f"pdf_html_bytes_{template_name}" in st.session_state:
                         st.download_button(
                             label=f"📥 Download {doc_name}_HTML.pdf",
                             data=st.session_state[f"pdf_html_bytes_{template_name}"],
                             file_name=f"{doc_name}_HTML.pdf",
                             mime="application/pdf",
+<<<<<<< HEAD
                             key=f"pdf_html_dl_{template_name}",
                             use_container_width=True
+=======
+                            key=f"pdf_html_dl_{template_name}"
+>>>>>>> 3987d94bf8947dde557f9dbc0125c7ece8ab0f3f
                         )
                 
                 # PDF from LaTeX (generate -> then persistent download button)
