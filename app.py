@@ -680,10 +680,31 @@ def main():
             
             st.success("Bill processed successfully!")
             
-            # Convert data for templates and store in session
             # Compute derived totals and deductions used by templates
-            extra_items_total = first_page_data["totals"].get("extra_items_sum", 0)
-            total_with_premium = first_page_data["totals"].get("payable", 0)
+            # Identify main vs extra items
+            items = first_page_data["items"]
+            divider_index = None
+            for idx, it in enumerate(items):
+                if it.get("is_divider") and it.get("description") == "Extra Items (With Premium)":
+                    divider_index = idx
+                    break
+            main_items = items[:divider_index] if divider_index is not None else [it for it in items if not it.get("is_divider", False)]
+            extra_items_only = items[divider_index + 1:] if divider_index is not None else []
+            
+            # Base totals
+            bill_total = round(sum(it.get("amount", 0) for it in main_items))
+            extra_items_base = round(sum(it.get("amount", 0) for it in extra_items_only))
+            
+            # Premium
+            premium_fraction = float(premium_percent) / 100.0
+            is_addition = str(premium_type).lower().startswith("a")  # Addition vs Deduction
+            signed = 1 if is_addition else -1
+            bill_premium = round(bill_total * premium_fraction * signed)
+            extra_premium = round(extra_items_base * premium_fraction * signed)
+            
+            bill_grand_total = bill_total + bill_premium
+            extra_items_total = extra_items_base + extra_premium
+            total_with_premium = bill_grand_total + extra_items_total
             
             # Deductions (default policy)
             sd_pct, it_pct, gst_pct, lc_pct = 0.10, 0.02, 0.02, 0.01
@@ -696,6 +717,7 @@ def main():
             
             expanded_totals = dict(first_page_data["totals"])
             expanded_totals.update({
+                # Derived rollups used by several templates
                 "total_with_premium": total_with_premium,
                 "extra_items_total": extra_items_total,
                 "net_payable": net_payable,
@@ -734,10 +756,15 @@ def main():
                     "bill_items": first_page_data["items"],
                     "header": first_page_data["header"],
                     "totals": expanded_totals,
-                    # Provide optional fields commonly referenced by first_page.html (best-effort)
+                    # Provide fields used by first_page.html and .tex
+                    "bill_total": bill_total,
+                    "bill_premium": bill_premium,
+                    "bill_grand_total": bill_grand_total,
                     "extra_items": extra_items_data.get("items", []),
+                    "extra_items_base": extra_items_base,
+                    "extra_premium": extra_premium,
                     "extra_items_sum": extra_items_total,
-                    "tender_premium_percent": first_page_data["totals"].get("premium", {}).get("percent", 0),
+                    "tender_premium_percent": premium_fraction,
                 },
                 "certificate_ii": {
                     "measurement_officer": "Site Engineer",
