@@ -1,0 +1,3 @@
+@echo off
+echo Starting Todo App...
+npm run dev
