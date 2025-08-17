@@ -1,24 +1,17 @@
 import streamlit as st
 import pandas as pd
 import pdfkit
-from docx import Document
-from docx.enum.section import WD_ORIENT
-from docx.shared import Pt, Mm
 from num2words import num2words
 import os
 import zipfile
 import tempfile
 from jinja2 import Environment, FileSystemLoader
-from pypdf import PdfReader, PdfWriter
-import numpy as np
 import platform
 from datetime import datetime
 import subprocess
 import shutil
 import traceback
-import argparse
 import requests
-from xhtml2pdf import pisa
 import tarfile
 import io
 
@@ -26,6 +19,7 @@ import io
 _local_logo = os.path.join(os.getcwd(), "crane_rajkumar.png")
 _page_icon = _local_logo if os.path.exists(_local_logo) else "📄"
 st.set_page_config(page_title="Bill Generator", page_icon=_page_icon, layout="wide")
+
 
 def resolve_logo_url() -> str | None:
     candidates = [
@@ -45,11 +39,14 @@ def resolve_logo_url() -> str | None:
             if os.path.exists(url):
                 return url
             r = requests.get(url, timeout=5)
-            if r.status_code == 200 and r.headers.get("content-type", "").startswith("image"):
+            if r.status_code == 200 and r.headers.get("content-type", "").startswith(
+                "image"
+            ):
                 return url
         except Exception:
             continue
     return None
+
 
 _logo_url = resolve_logo_url()
 if _logo_url:
@@ -66,17 +63,21 @@ with header_cols[0]:
     elif _logo_url:
         st.image(_logo_url, width=64)
 with header_cols[1]:
-    st.markdown("""
+    st.markdown(
+        """
     <div style="display:flex; align-items:center; gap:12px;">
       <div>
         <h2 style="margin:0;">Bill Generator</h2>
         <p style="margin:0; color:#666;">A4 documents with professional layout</p>
       </div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 # Debug logging helpers
 DEBUG_VERBOSE = os.getenv("BILL_VERBOSE", "0") == "1"
+
 
 def _show_celebration_once():
     if "_celebrated" not in st.session_state:
@@ -86,6 +87,7 @@ def _show_celebration_once():
             st.snow()
         except Exception:
             pass
+
 
 def _render_landing():
     # Minimal CSS to enhance appearance
@@ -126,12 +128,14 @@ def _render_landing():
             st.image(_logo_url, use_container_width=True)
     _show_celebration_once()
 
+
 def _log_debug(message: str) -> None:
     if DEBUG_VERBOSE:
         try:
             st.write(message)
         except Exception:
             pass
+
 
 def _log_warn(message: str) -> None:
     if DEBUG_VERBOSE:
@@ -140,12 +144,23 @@ def _log_warn(message: str) -> None:
         except Exception:
             pass
 
+
 def _log_traceback() -> None:
     if DEBUG_VERBOSE:
         try:
             st.write(traceback.format_exc())
         except Exception:
             pass
+
+
+def _log_error(message: str) -> None:
+    """Log error messages"""
+    if DEBUG_VERBOSE:
+        try:
+            st.error(message)
+        except Exception:
+            pass
+
 
 # Create templates directory if it doesn't exist
 os.makedirs("templates", exist_ok=True)
@@ -156,12 +171,14 @@ env = Environment(loader=FileSystemLoader("templates"), cache_size=0)
 # Temporary directory
 TEMP_DIR = None
 
+
 def get_temp_dir():
     """Get or create a temporary directory for this session."""
     global TEMP_DIR
     if TEMP_DIR is None or not os.path.exists(TEMP_DIR):
         TEMP_DIR = tempfile.mkdtemp()
     return TEMP_DIR
+
 
 def ensure_wkhtmltopdf() -> str | None:
     """Ensure wkhtmltopdf is available. If missing, download a static linux tarball and extract to a temp dir. Returns path or None."""
@@ -176,7 +193,7 @@ def ensure_wkhtmltopdf() -> str | None:
     # 3) Download and extract a Linux static binary
     urls = [
         "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1_linux-generic-amd64.tar.xz",
-        "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1.centos8.x86_64.rpm.tar.xz"
+        "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1.centos8.x86_64.rpm.tar.xz",
     ]
     cache_dir = os.path.join(tempfile.gettempdir(), "wkhtmltopdf_bin")
     os.makedirs(cache_dir, exist_ok=True)
@@ -186,8 +203,10 @@ def ensure_wkhtmltopdf() -> str | None:
             if resp.status_code != 200 or len(resp.content) < 1024:
                 continue
             # Validate content size to prevent memory exhaustion
-            content_length = resp.headers.get('content-length')
-            if content_length and int(content_length) > 100 * 1024 * 1024:  # 100MB limit
+            content_length = resp.headers.get("content-length")
+            if (
+                content_length and int(content_length) > 100 * 1024 * 1024
+            ):  # 100MB limit
                 _log_warn(f"Download too large: {content_length} bytes")
                 continue
             tar_bytes = resp.content
@@ -215,6 +234,7 @@ def ensure_wkhtmltopdf() -> str | None:
             continue
     return None
 
+
 # Configure wkhtmltopdf
 wkhtmltopdf_exe = None
 if platform.system() == "Windows":
@@ -223,255 +243,251 @@ else:
     wkhtmltopdf_exe = ensure_wkhtmltopdf() or shutil.which("wkhtmltopdf")
 
 try:
-    config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_exe) if wkhtmltopdf_exe else pdfkit.configuration()
+    config = (
+        pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_exe)
+        if wkhtmltopdf_exe
+        else pdfkit.configuration()
+    )
 except Exception:
     config = None
+
 
 def number_to_words(number):
     try:
         return num2words(int(number), lang="en_IN").title()
-    except:
+    except (ValueError, TypeError, AttributeError) as e:
+        _log_error(f"Error converting number to words: {e}")
         return str(number)
 
-def process_bill(ws_wo, ws_bq, ws_extra, premium_percent, premium_type, last_bill_amount):
-    _log_debug("Starting process_bill")
-    first_page_data = {"header": [], "items": [], "totals": {}}
-    last_page_data = {"payable_amount": 0, "amount_words": ""}
-    deviation_data = {"items": [], "summary": {}}
-    extra_items_data = {"items": []}
-    note_sheet_data = {"notes": []}
-    
-    from datetime import datetime, date
 
-    # Header (A1:G19) only — matching actual data range
-    header_data = ws_wo.iloc[:19, :7].replace(np.nan, "").values.tolist()
+def process_excel(file, premium_percent, premium_type, has_headers=True):
+    df = pd.read_excel(file, header=0 if has_headers else None)
 
-    # Ensure all dates are formatted as date-only strings
-    for i in range(len(header_data)):
-        for j in range(len(header_data[i])):
-            val = header_data[i][j]
-            if isinstance(val, (pd.Timestamp, datetime, date)):
-                header_data[i][j] = val.strftime("%d-%m-%Y")
+    templates_data = {}
 
-    # Assign to first page
-    first_page_data["header"] = header_data
-    
-    # Work Order items
-    last_row_wo = ws_wo.shape[0]
-    for i in range(21, last_row_wo):
-        qty_raw = ws_bq.iloc[i, 3] if i < ws_bq.shape[0] and pd.notnull(ws_bq.iloc[i, 3]) else 0
-        rate_raw = ws_wo.iloc[i, 4] if pd.notnull(ws_wo.iloc[i, 4]) else None
+    # Detect sections dynamically
+    header_start = (
+        df[
+            df.iloc[:, 0].str.contains(
+                "Name of Contractor|Name of Contractor or supplier", na=False
+            )
+        ].index[0]
+        if has_headers
+        else 0
+    )
+    bill_items_start = (
+        df[
+            df.iloc[:, 0].str.contains("Bill Items|Item No", na=False, case=False)
+        ].index[0]
+        + 1
+        if has_headers
+        else 13
+    )
+    extra_items_start = (
+        df[df.iloc[:, 0].str.contains("Extra Items", na=False, case=False)].index[0] + 1
+        if has_headers
+        else find_extra_start(df, bill_items_start)
+    )
 
-        qty = 0
-        if isinstance(qty_raw, (int, float)):
-            qty = float(qty_raw)
-        elif isinstance(qty_raw, str):
-            cleaned_qty = qty_raw.strip().replace(',', '').replace(' ', '')
-            try:
-                qty = float(cleaned_qty)
-            except ValueError:
-                _log_warn(f"Skipping invalid quantity at Bill Quantity row {i+1}: '{qty_raw}'")
-                qty = 0
-
-        rate = 0
-        if isinstance(rate_raw, (int, float)):
-            rate = float(rate_raw)
-        elif isinstance(rate_raw, str):
-            cleaned_rate = rate_raw.strip().replace(',', '').replace(' ', '')
-            try:
-                rate = float(cleaned_rate)
-            except ValueError:
-                _log_warn(f"Skipping invalid rate at Work Order row {i+1}: '{rate_raw}'")
-                rate = 0
-
-        item = {
-            "serial_no": str(ws_wo.iloc[i, 0]) if pd.notnull(ws_wo.iloc[i, 0]) else "",
-            "description": str(ws_wo.iloc[i, 1]) if pd.notnull(ws_wo.iloc[i, 1]) else "",
-            "unit": str(ws_wo.iloc[i, 2]) if pd.notnull(ws_wo.iloc[i, 2]) else "",
-            "quantity": qty,
-            "rate": rate,
-            "remark": str(ws_wo.iloc[i, 6]) if pd.notnull(ws_wo.iloc[i, 6]) else "",
-            "amount": round(qty * rate) if qty and rate else 0,
-            "is_divider": False
-        }
-        first_page_data["items"].append(item)
-
-    # Extra Items divider
-    first_page_data["items"].append({
-        "description": "Extra Items (With Premium)",
-        "bold": True,
-        "underline": True,
-        "amount": 0,
-        "quantity": 0,
-        "rate": 0,
-        "serial_no": "",
-        "unit": "",
-        "remark": "",
-        "is_divider": True
-    })
-
-    # Extra Items
-    last_row_extra = ws_extra.shape[0]
-    for j in range(6, last_row_extra):
-        qty_raw = ws_extra.iloc[j, 3] if pd.notnull(ws_extra.iloc[j, 3]) else 0
-        rate_raw = ws_extra.iloc[j, 5] if pd.notnull(ws_extra.iloc[j, 5]) else None
-
-        qty = 0
-        if isinstance(qty_raw, (int, float)):
-            qty = float(qty_raw)
-        elif isinstance(qty_raw, str):
-            cleaned_qty = qty_raw.strip().replace(',', '').replace(' ', '')
-            try:
-                qty = float(cleaned_qty)
-            except ValueError:
-                _log_warn(f"Skipping invalid quantity at Extra Items row {j+1}: '{qty_raw}'")
-                qty = 0
-
-        rate = 0
-        if isinstance(rate_raw, (int, float)):
-            rate = float(rate_raw)
-        elif isinstance(rate_raw, str):
-            cleaned_rate = rate_raw.strip().replace(',', '').replace(' ', '')
-            try:
-                rate = float(cleaned_rate)
-            except ValueError:
-                _log_warn(f"Skipping invalid rate at Extra Items row {j+1}: '{rate_raw}'")
-                rate = 0
-
-        item = {
-            "serial_no": str(ws_extra.iloc[j, 0]) if pd.notnull(ws_extra.iloc[j, 0]) else "",
-            "description": str(ws_extra.iloc[j, 2]) if pd.notnull(ws_extra.iloc[j, 2]) else "",
-            "unit": str(ws_extra.iloc[j, 4]) if pd.notnull(ws_extra.iloc[j, 4]) else "",
-            "quantity": qty,
-            "rate": rate,
-            "remark": str(ws_extra.iloc[j, 1]) if pd.notnull(ws_extra.iloc[j, 1]) else "",
-            "amount": round(qty * rate) if qty and rate else 0,
-            "is_divider": False
-        }
-        first_page_data["items"].append(item)
-        extra_items_data["items"].append(item.copy())  # Copy for standalone Extra Items
-
-    # Totals
-    data_items = [item for item in first_page_data["items"] if not item.get("is_divider", False)]
-    total_amount = round(sum(item.get("amount", 0) for item in data_items))
-    premium_amount = round(total_amount * (premium_percent / 100) if premium_type == "above" else -total_amount * (premium_percent / 100))
-    payable_amount = round(total_amount + premium_amount)
-
-    first_page_data["totals"] = {
-        "grand_total": total_amount,
-        "premium": {"percent": premium_percent / 100, "type": premium_type, "amount": premium_amount},
-        "payable": payable_amount
+    # Map Header
+    header_df = df.iloc[header_start : header_start + 12, 0:2].fillna("N/A")
+    header_dict = dict(zip(header_df.iloc[:, 0], header_df.iloc[:, 1]))
+    templates_data["first_page"] = {
+        "header": header_dict,
+        "name_of_firm": header_dict.get("Name of Contractor or supplier", "N/A"),
+        "name_of_work": header_dict.get("Name of Work", "N/A"),
+        "work_order_amount": float(
+            header_dict.get("WORK ORDER AMOUNT RS.", 0)
+            or header_dict.get("WORK ORDER AMOUNT RS.", "")
+            or 0
+        ),
+        "last_bill_amount": float(
+            header_dict.get("Last Bill Amount", 0)
+            or header_dict.get("No. and date of the last bill", "").split()[-1]
+            if " " in header_dict.get("No. and date of the last bill", "")
+            else 0
+        ),
     }
 
-    try:
-        extra_items_start = next(i for i, item in enumerate(first_page_data["items"]) if item.get("description") == "Extra Items (With Premium)")
-        extra_items = [item for item in first_page_data["items"][extra_items_start + 1:] if not item.get("is_divider", False)]
-        extra_items_sum = round(sum(item.get("amount", 0) for item in extra_items))
-        extra_items_premium = round(extra_items_sum * (premium_percent / 100) if premium_type == "above" else -extra_items_sum * (premium_percent / 100))
-        first_page_data["totals"]["extra_items_sum"] = extra_items_sum + extra_items_premium
-    except StopIteration:
-        first_page_data["totals"]["extra_items_sum"] = 0
+    # Map Bill Items with validation
+    bill_items_cols = (
+        [
+            "Unit",
+            "Quantity Since",
+            "Quantity Upto",
+            "Item No.",
+            "Description",
+            "Rate",
+            "Amount Upto",
+            "Amount Since",
+            "Remark",
+        ]
+        if has_headers
+        else range(9)
+    )
+    bill_items_df = df.iloc[
+        bill_items_start : bill_items_start + len(df) - bill_items_start,
+        : max(len(bill_items_cols), df.shape[1]),
+    ].dropna(how="all", subset=bill_items_cols)
+    if not bill_items_df.empty:
+        bill_items = bill_items_df.to_dict(orient="records")
+        templates_data["first_page"]["bill_items"] = [
+            {
+                "unit": str(item.get(bill_items_cols[0], "")).strip(),
+                "quantity_since": float(
+                    str(item.get(bill_items_cols[1], "0")).strip() or 0
+                ),
+                "quantity_upto": float(
+                    str(item.get(bill_items_cols[2], "0")).strip() or 0
+                ),
+                "serial_no": str(item.get(bill_items_cols[3], "")).strip(),
+                "description": str(item.get(bill_items_cols[4], "")).strip(),
+                "rate": float(str(item.get(bill_items_cols[5], "0")).strip() or 0),
+                "amount_upto": float(
+                    str(item.get(bill_items_cols[6], "0")).strip() or 0
+                ),
+                "amount_since": float(
+                    str(item.get(bill_items_cols[7], "0")).strip() or 0
+                ),
+                "remark": str(item.get(bill_items_cols[8], "")).strip(),
+            }
+            for item in bill_items
+            if any(item.get(col, "") != "" for col in bill_items_cols)
+        ]
+    else:
+        templates_data["first_page"]["bill_items"] = []
 
-    # Last Page
-    last_page_data = {"payable_amount": payable_amount, "amount_words": number_to_words(payable_amount)}
+    # Map Extra Items with validation
+    extra_items_cols = (
+        [
+            "Unit",
+            "Item No.",
+            "Description",
+            "Quantity Since",
+            "Quantity Upto",
+            "Rate",
+            "Amount Upto",
+            "Amount Since",
+            "Remark",
+        ]
+        if has_headers
+        else range(9)
+    )
+    extra_items_df = df.iloc[
+        extra_items_start:, : max(len(extra_items_cols), df.shape[1])
+    ].dropna(how="all", subset=extra_items_cols)
+    if not extra_items_df.empty:
+        extra_items = extra_items_df.to_dict(orient="records")
+        templates_data["first_page"]["extra_items"] = [
+            {
+                "unit": str(item.get(extra_items_cols[0], "")).strip(),
+                "serial_no": str(item.get(extra_items_cols[1], "")).strip(),
+                "description": str(item.get(extra_items_cols[2], "")).strip(),
+                "quantity_since": float(
+                    str(item.get(extra_items_cols[3], "0")).strip() or 0
+                ),
+                "quantity_upto": float(
+                    str(item.get(extra_items_cols[4], "0")).strip() or 0
+                ),
+                "rate": float(str(item.get(extra_items_cols[5], "0")).strip() or 0),
+                "amount_upto": float(
+                    str(item.get(extra_items_cols[6], "0")).strip() or 0
+                ),
+                "amount_since": float(
+                    str(item.get(extra_items_cols[7], "0")).strip() or 0
+                ),
+                "remark": str(item.get(extra_items_cols[8], "")).strip(),
+            }
+            for item in extra_items
+            if any(item.get(col, "") != "" for col in extra_items_cols)
+        ]
+    else:
+        templates_data["first_page"]["extra_items"] = []
 
-    # Deviation Statement
-    work_order_total = 0
-    executed_total = 0
-    overall_excess = 0
-    overall_saving = 0
-    for i in range(21, last_row_wo):
-        _log_debug(f"Processing deviation row {i+1}: wo_qty={ws_wo.iloc[i, 3]}, wo_rate={ws_wo.iloc[i, 4]}, bq_qty={ws_bq.iloc[i, 3] if i < ws_bq.shape[0] else 'N/A'}")
-        qty_wo_raw = ws_wo.iloc[i, 3] if pd.notnull(ws_wo.iloc[i, 3]) else 0
-        rate_raw = ws_wo.iloc[i, 4] if pd.notnull(ws_wo.iloc[i, 4]) else None
-        qty_bill_raw = ws_bq.iloc[i, 3] if i < ws_bq.shape[0] and pd.notnull(ws_bq.iloc[i, 3]) else 0
+    # Calculate Totals with validation
+    bill_total = (
+        sum(item["amount_upto"] for item in templates_data["first_page"]["bill_items"])
+        if templates_data["first_page"]["bill_items"]
+        else 0
+    )
+    extra_items_total = (
+        sum(item["amount_upto"] for item in templates_data["first_page"]["extra_items"])
+        if templates_data["first_page"]["extra_items"]
+        else 0
+    )
+    tender_premium_percent = premium_percent / 100 if premium_percent else 0
+    is_addition = premium_type.lower() == "add"
+    premium_amount = (
+        (bill_total + extra_items_total) * tender_premium_percent
+        if is_addition
+        else -(bill_total + extra_items_total) * tender_premium_percent
+    )
+    grand_total = bill_total + extra_items_total + premium_amount
+    net_payable = max(
+        0, grand_total - templates_data["first_page"]["last_bill_amount"]
+    )  # Ensure non-negative
 
-        qty_wo = 0
-        if isinstance(qty_wo_raw, (int, float)):
-            qty_wo = float(qty_wo_raw)
-        elif isinstance(qty_wo_raw, str):
-            cleaned_qty_wo = qty_wo_raw.strip().replace(',', '').replace(' ', '')
-            try:
-                qty_wo = float(cleaned_qty_wo)
-            except ValueError:
-                _log_warn(f"Skipping invalid qty_wo at row {i+1}: '{qty_wo_raw}'")
-                qty_wo = 0
-
-        rate = 0
-        if isinstance(rate_raw, (int, float)):
-            rate = float(rate_raw)
-        elif isinstance(rate_raw, str):
-            cleaned_rate = rate_raw.strip().replace(',', '').replace(' ', '')
-            try:
-                rate = float(cleaned_rate)
-            except ValueError:
-                _log_warn(f"Skipping invalid rate at row {i+1}: '{rate_raw}'")
-                rate = 0
-
-        qty_bill = 0
-        if isinstance(qty_bill_raw, (int, float)):
-            qty_bill = float(qty_bill_raw)
-        elif isinstance(qty_bill_raw, str):
-            cleaned_qty_bill = qty_bill_raw.strip().replace(',', '').replace(' ', '')
-            try:
-                qty_bill = float(cleaned_qty_bill)
-            except ValueError:
-                _log_warn(f"Skipping invalid qty_bill at row {i+1}: '{qty_bill_raw}'")
-                qty_bill = 0
-
-        amt_wo = round(qty_wo * rate)
-        amt_bill = round(qty_bill * rate)
-        excess_qty = qty_bill - qty_wo if qty_bill > qty_wo else 0
-        excess_amt = round(excess_qty * rate)
-        saving_qty = qty_wo - qty_bill if qty_wo > qty_bill else 0
-        saving_amt = round(saving_qty * rate)
-
-        work_order_total += amt_wo
-        executed_total += amt_bill
-        overall_excess += excess_amt
-        overall_saving += saving_amt
-
-        item = {
-            "serial_no": str(ws_wo.iloc[i, 0]) if pd.notnull(ws_wo.iloc[i, 0]) else "",
-            "description": str(ws_wo.iloc[i, 1]) if pd.notnull(ws_wo.iloc[i, 1]) else "",
-            "unit": str(ws_wo.iloc[i, 2]) if pd.notnull(ws_wo.iloc[i, 2]) else "",
-            "qty_wo": qty_wo,
-            "rate": rate,
-            "amt_wo": amt_wo,
-            "qty_bill": qty_bill,
-            "amt_bill": amt_bill,
-            "excess_qty": excess_qty,
-            "excess_amt": excess_amt,
-            "saving_qty": saving_qty,
-            "saving_amt": saving_amt,
-            "remark": str(ws_wo.iloc[i, 6]) if pd.notnull(ws_wo.iloc[i, 6]) else ""
-        }
-        deviation_data["items"].append(item)
-
-    net_difference = round(executed_total - work_order_total)
-    
-    deviation_data["summary"] = {
-        "work_order_total": round(work_order_total),
-        "executed_total": round(executed_total),
-        "overall_excess": round(overall_excess),
-        "overall_saving": round(overall_saving),
-        "premium": {"percent": premium_percent / 100, "type": premium_type},
-        "net_difference": round(net_difference)
+    # Populate totals with new structure
+    templates_data["first_page"]["totals"] = {
+        "bill_total": bill_total,
+        "bill_premium": premium_amount if is_addition else 0,
+        "grand_total": grand_total,
+        "extra_items_base": extra_items_total,
+        "extra_premium": 0,  # Not in instructions, but keeping for backward compatibility
+        "extra_items_total": extra_items_total,
+        "work_order_total": templates_data["first_page"]["work_order_amount"],
+        "last_bill_amount": templates_data["first_page"]["last_bill_amount"],
+        "payable": net_payable,
+        "premium": {
+            "percent": tender_premium_percent,
+            "type": "Add" if is_addition else "Deduct",
+            "amount": premium_amount,
+        },
     }
 
-    _log_debug("Prepared first_page_data items")
-    _log_debug("Prepared extra_items_data items")
-    _log_debug("Prepared deviation_data items")
-    return first_page_data, last_page_data, deviation_data, extra_items_data, note_sheet_data
+    # For backward compatibility, also keep the flat structure
+    templates_data["first_page"].update(
+        {
+            "bill_total": bill_total,
+            "bill_premium": premium_amount if is_addition else 0,
+            "bill_grand_total": bill_total + (premium_amount if is_addition else 0),
+            "extra_items_base": extra_items_total,
+            "extra_premium": 0,  # Not in instructions, but keeping for backward compatibility
+            "extra_items_total": extra_items_total,
+            "total_with_premium": grand_total,
+            "work_order_amount": templates_data["first_page"]["work_order_amount"],
+            "last_bill_amount": templates_data["first_page"]["last_bill_amount"],
+            "net_payable": net_payable,
+            "premium_percent": premium_percent,
+            "premium_type": "Add" if is_addition else "Deduct",
+            "tender_premium_percent": tender_premium_percent,
+        }
+    )
+
+    return templates_data
+
+
+def find_extra_start(df, bill_start):
+    for row in range(bill_start, len(df)):
+        if pd.isna(df.iloc[row, 0]):
+            return row + 1
+    return len(df)  # Default to end if no blank found
+
 
 def generate_bill_notes(payable_amount, work_order_amount, extra_item_amount):
-    percentage_work_done = float(payable_amount / work_order_amount * 100) if work_order_amount > 0 else 0
+    percentage_work_done = (
+        float(payable_amount / work_order_amount * 100) if work_order_amount > 0 else 0
+    )
     serial_number = 1
     note = []
-    note.append(f"{serial_number}. The work has been completed {percentage_work_done:.2f}% of the Work Order Amount.")
+    note.append(
+        f"{serial_number}. The work has been completed {percentage_work_done:.2f}% of the Work Order Amount."
+    )
     serial_number += 1
     if percentage_work_done < 90:
-        note.append(f"{serial_number}. The execution of work at final stage is less than 90%...")
+        note.append(
+            f"{serial_number}. The execution of work at final stage is less than 90%..."
+        )
         serial_number += 1
     elif percentage_work_done > 100 and percentage_work_done <= 105:
         note.append(f"{serial_number}. Requisite Deviation Statement is enclosed...")
@@ -482,502 +498,318 @@ def generate_bill_notes(payable_amount, work_order_amount, extra_item_amount):
     note.append(f"{serial_number}. Quality Control (QC) test reports attached.")
     serial_number += 1
     if extra_item_amount > 0:
-        extra_item_percentage = float(extra_item_amount / work_order_amount * 100) if work_order_amount > 0 else 0
+        extra_item_percentage = (
+            float(extra_item_amount / work_order_amount * 100)
+            if work_order_amount > 0
+            else 0
+        )
         if extra_item_percentage > 5:
-            note.append(f"{serial_number}. The amount of Extra items is Rs. {extra_item_amount}...")
+            note.append(
+                f"{serial_number}. The amount of Extra items is Rs. {extra_item_amount}..."
+            )
         else:
-            note.append(f"{serial_number}. The amount of Extra items is Rs. {extra_item_amount}...")
+            note.append(
+                f"{serial_number}. The amount of Extra items is Rs. {extra_item_amount}..."
+            )
         serial_number += 1
-    note.append(f"{serial_number}. Please peruse above details for necessary decision-making.")
+    note.append(
+        f"{serial_number}. Please peruse above details for necessary decision-making."
+    )
     note.append("")
     note.append("                                Premlata Jain")
     note.append("                               AAO- As Auditor")
     return {"notes": note}
 
-def generate_pdf(sheet_name, data, orientation, output_path):
-    _log_debug(f"Generating PDF for {sheet_name}")
+
+def generate_pdf(template_name, data, output_path):
+    """Generate a PDF from a template with the given data.
+
+    Args:
+        template_name (str): Name of the template file (without .html extension)
+        data (dict): Data to render in the template
+        output_path (str): Path to save the generated PDF
+    """
     try:
-        template = env.get_template(f"{sheet_name.lower().replace(' ', '_')}.html")
+        # Precompute deviation percentage if this is a deviation statement
+        if template_name == "deviation_statement":
+            total_with_premium = data.get("totals", {}).get("total_with_premium", 0)
+            work_order_total = (
+                data.get("totals", {}).get("work_order_total", 0) or 1
+            )  # Avoid division by zero
+
+            # Calculate and store the deviation percentage
+            deviation = (
+                (total_with_premium - work_order_total) / work_order_total
+            ) * 100
+            data["totals"]["deviation_percentage"] = abs(deviation)
+
+        # Render the template
+        template = env.get_template(f"{template_name}.html")
         html_content = template.render(data=data)
-        # Save HTML alongside PDF for consistency checks/comparison
-        try:
-            html_path = output_path[:-4] + ".html" if output_path.lower().endswith(".pdf") else output_path + ".html"
-            with open(html_path, "w", encoding="utf-8") as f:
-                f.write(html_content)
-        except Exception:
-            pass
-        options = {
-            "page-size": "A4",
-            "orientation": orientation,
-            "margin-top": "10mm",
-            "margin-bottom": "10mm",
-            "margin-left": "10mm",
-            "margin-right": "10mm",
-            "print-media-type": None,
-            "enable-local-file-access": None,
-            "disable-smart-shrinking": None,
-            "zoom": "1",
-            "dpi": 300,
-        }
-        if config is None:
-            _log_warn("wkhtmltopdf missing; using xhtml2pdf fallback.")
-            try:
-                # Adjust layout for xhtml2pdf to avoid narrow content due to mm widths
-                fallback_html = html_content
-                for mm in ("190mm", "277mm"):
-                    fallback_html = fallback_html.replace(f"width: {mm}", "width: 100%")
-                    fallback_html = fallback_html.replace(f"max-width: {mm}", "width: 100%")
-                # Remove centered margin that can introduce side gaps
-                fallback_html = fallback_html.replace("margin: 0 auto;", "margin: 0;")
-                default_css = '@page { size: A4 %s; margin: 10mm; }' % ("landscape" if orientation=="landscape" else "portrait")
-                with open(output_path, "wb") as pdf_file:
-                    pisa.CreatePDF(src=fallback_html, dest=pdf_file, default_css=default_css)
-            except Exception:
-                _log_traceback()
-        else:
-            pdfkit.from_string(
-                html_content,
-                output_path,
-                configuration=config,
-                options=options
-            )
-        _log_debug(f"Finished PDF for {sheet_name}")
+
+        # Generate PDF
+        pdfkit.from_string(
+            html_content,
+            output_path,
+            configuration=config,
+            options={
+                "encoding": "UTF-8",
+                "enable-local-file-access": None,
+                "quiet": "",
+            },
+        )
+        return True
     except Exception as e:
-        st.error(f"Error generating PDF for {sheet_name}: {str(e)}")
-        _log_traceback()
-        raise
+        _log_error(f"Error generating {template_name}.pdf: {str(e)}")
+        return False
+
 
 def generate_latex_pdf(template_name, data, output_path):
     """Generate PDF from LaTeX template"""
     try:
-        # Check if pdflatex is available
-        if not shutil.which("pdflatex"):
-            _log_warn("pdflatex not available for LaTeX PDF generation")
-            return False
-            
+        # Precompute deviation percentage if this is a deviation statement
+        if template_name == "deviation_statement":
+            total_with_premium = data.get("totals", {}).get("total_with_premium", 0)
+            work_order_total = (
+                data.get("totals", {}).get("work_order_total", 0) or 1
+            )  # Avoid division by zero
+
+            # Calculate and store the deviation percentage
+            deviation = (
+                (total_with_premium - work_order_total) / work_order_total
+            ) * 100
+            data["totals"]["deviation_percentage"] = abs(deviation)
+
+        # Render the LaTeX template
         template = env.get_template(f"{template_name}.tex")
-        latex_content = template.render(data=data)
-        
-        temp_dir = get_temp_dir()
-        tex_path = os.path.join(temp_dir, f"{template_name}.tex")
-        
-        with open(tex_path, "w", encoding="utf-8") as f:
-            f.write(latex_content)
-        
-        # Run pdflatex
-        result = subprocess.run(
-            ["pdflatex", "-output-directory", temp_dir, tex_path],
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        
-        if result.returncode == 0:
-            pdf_source = os.path.join(temp_dir, f"{template_name}.pdf")
-            if os.path.exists(pdf_source):
-                shutil.copy2(pdf_source, output_path)
-                return True
-        else:
-            _log_warn(f"LaTeX compilation failed: {result.stderr}")
-            
+        tex_content = template.render(data=data)
+
+        # Create a temporary directory for compilation
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Write the .tex file
+            tex_path = os.path.join(temp_dir, f"{template_name}.tex")
+            with open(tex_path, "w", encoding="utf-8") as f:
+                f.write(tex_content)
+
+            # Compile the LaTeX to PDF
+            try:
+                subprocess.run(
+                    [
+                        "pdflatex",
+                        "-interaction=nonstopmode",
+                        f"-output-directory={temp_dir}",
+                        tex_path,
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+
+                # Copy the generated PDF to the output path
+                pdf_path = os.path.splitext(tex_path)[0] + ".pdf"
+                if os.path.exists(pdf_path):
+                    shutil.copy2(pdf_path, output_path)
+                    return True
+                else:
+                    _log_error(f"PDF generation failed: {pdf_path} not found")
+                    return False
+
+            except subprocess.CalledProcessError as e:
+                _log_error(f"LaTeX compilation failed: {e.stderr}")
+                return False
+
     except Exception as e:
-        _log_warn(f"LaTeX PDF generation error: {e}")
-    
-    return False
+        _log_error(f"Error generating {template_name}.pdf: {str(e)}")
+        return False
+
 
 def create_combined_zip(templates_data):
     """Create a zip file with all generated documents"""
     temp_dir = get_temp_dir()
     zip_path = os.path.join(temp_dir, "Bill_Documents.zip")
-    
+
     templates = [
         ("first_page", "First_Page"),
         ("certificate_ii", "Certificate_II"),
         ("certificate_iii", "Certificate_III"),
         ("deviation_statement", "Deviation_Statement"),
         ("extra_items", "Extra_Items"),
-        ("note_sheet", "Note_Sheet")
+        ("note_sheet", "Note_Sheet"),
     ]
-    
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for template_name, doc_name in templates:
             try:
                 # Generate HTML
                 html_template = env.get_template(f"{template_name}.html")
                 html_content = html_template.render(data=templates_data[template_name])
                 zip_file.writestr(f"{doc_name}.html", html_content)
-                
+
                 # Generate HTML-based PDF
                 if config:
                     try:
-                        pdf_path = os.path.join(temp_dir, f"{doc_name}_HTML.pdf")
+                        pdf_path = os.path.join(temp_dir, f"{doc_name}.pdf")
                         options = {
-                            'page-size': 'A4',
-                            'margin-top': '10mm',
-                            'margin-right': '10mm',
-                            'margin-bottom': '10mm',
-                            'margin-left': '10mm',
-                            'encoding': "UTF-8",
-                            'no-outline': None,
-                            'enable-local-file-access': None
+                            "page-size": "A4",
+                            "margin-top": "10mm",
+                            "margin-right": "10mm",
+                            "margin-bottom": "10mm",
+                            "margin-left": "10mm",
+                            "encoding": "UTF-8",
+                            "no-outline": None,
+                            "enable-local-file-access": None,
                         }
-                        pdfkit.from_string(html_content, pdf_path, options=options, configuration=config)
+                        pdfkit.from_string(
+                            html_content,
+                            pdf_path,
+                            options=options,
+                            configuration=config,
+                        )
                         if os.path.exists(pdf_path):
-                            with open(pdf_path, 'rb') as f:
+                            with open(pdf_path, "rb") as f:
                                 zip_file.writestr(f"{doc_name}_HTML.pdf", f.read())
                     except Exception as e:
                         _log_warn(f"HTML PDF generation failed for {doc_name}: {e}")
-                
+
                 # Generate LaTeX-based PDF if available
                 latex_pdf_path = os.path.join(temp_dir, f"{doc_name}_LaTeX.pdf")
-                if generate_latex_pdf(template_name, templates_data[template_name], latex_pdf_path):
-                    with open(latex_pdf_path, 'rb') as f:
+                if generate_latex_pdf(
+                    template_name, templates_data[template_name], latex_pdf_path
+                ):
+                    with open(latex_pdf_path, "rb") as f:
                         zip_file.writestr(f"{doc_name}_LaTeX.pdf", f.read())
-                
+
                 # Generate LaTeX source
                 if os.path.exists(f"templates/{template_name}.tex"):
                     latex_template = env.get_template(f"{template_name}.tex")
-                    latex_content = latex_template.render(data=templates_data[template_name])
+                    latex_content = latex_template.render(
+                        data=templates_data[template_name]
+                    )
                     zip_file.writestr(f"{doc_name}.tex", latex_content)
-                    
+
             except Exception as e:
                 _log_warn(f"Error generating {doc_name}: {e}")
-    
+
     return zip_path if os.path.exists(zip_path) else None
+
 
 def main():
     st.title("Government Bill Generator")
-    
+
     # File upload
-    uploaded_file = st.file_uploader("Choose an Excel file", type=['xlsx', 'xls'])
-    
+    uploaded_file = st.file_uploader("Choose an Excel file", type=["xlsx", "xls"])
+
     if uploaded_file is None:
         _render_landing()
         return
-    
+
     # Premium settings
     col1, col2 = st.columns(2)
     with col1:
-        premium_percent = st.number_input("Premium Percentage (%)", min_value=0.0, max_value=100.0, value=2.5, step=0.1)
+        premium_percent = st.number_input(
+            "Tender Premium (%)", value=2.5, min_value=0.0, max_value=100.0, step=0.1
+        )
     with col2:
-        premium_type = st.selectbox("Premium Type", ["Addition", "Deduction"])
-    
-    # Add last bill amount input
-    last_bill_amount = st.number_input("Last Bill Amount", min_value=0.0, value=0.0, step=0.01, 
-                                     format="%.2f", help="Enter the amount from the previous bill")
-    
+        premium_type = st.selectbox("Premium Type", ["Add", "Deduct"])
+
+    # Add last bill amount input (currently not used in processing)
+    st.number_input(
+        "Last Bill Amount",
+        min_value=0.0,
+        value=0.0,
+        step=0.01,
+        format="%.2f",
+        help="Enter the amount from the previous bill",
+    )
+
     # Generate bill and capture results into session state
     if st.button("Generate Bill"):
         try:
-            # Read Excel file
-            excel_file = pd.ExcelFile(uploaded_file)
-            sheet_names = excel_file.sheet_names
-            
-            # Read required sheets
-            ws_wo = pd.read_excel(uploaded_file, sheet_name=sheet_names[0]) if len(sheet_names) > 0 else pd.DataFrame()
-            ws_bq = pd.read_excel(uploaded_file, sheet_name=sheet_names[1]) if len(sheet_names) > 1 else ws_wo.copy()
-            ws_extra = pd.read_excel(uploaded_file, sheet_name=sheet_names[2]) if len(sheet_names) > 2 else pd.DataFrame()
-            
-            # Process the bill
-            with st.spinner("Processing bill data..."):
-                first_page_data, last_page_data, deviation_data, extra_items_data, note_sheet_data = process_bill(
-                    ws_wo, ws_bq, ws_extra, premium_percent, premium_type, last_bill_amount
+            # Process the Excel file
+            with st.spinner("Processing Excel file..."):
+                templates_data = process_excel(
+                    uploaded_file, premium_percent, premium_type
                 )
-            
-            st.success("Bill processed successfully!")
-            
-            # Convert data for templates and store in session
-            # Compute derived totals and deductions used by templates
-            # Identify main vs extra items
-            items = first_page_data["items"]
-            divider_index = None
-            for idx, it in enumerate(items):
-                if it.get("is_divider") and it.get("description") == "Extra Items (With Premium)":
-                    divider_index = idx
-                    break
-            main_items = items[:divider_index] if divider_index is not None else [it for it in items if not it.get("is_divider", False)]
-            extra_items_only = items[divider_index + 1:] if divider_index is not None else []
-            
-            # Base totals
-            bill_total = round(sum(it.get("amount", 0) for it in main_items))
-            extra_items_base = round(sum(it.get("amount", 0) for it in extra_items_only))
-            
-            # Premium calculation
-            premium_fraction = float(premium_percent) / 100.0
-            is_addition = str(premium_type).lower().startswith("a")  # Addition vs Deduction
-            signed = 1 if is_addition else -1
-            bill_premium = round(bill_total * premium_fraction * signed)
-            extra_premium = round(extra_items_base * premium_fraction * signed)
-            
-            # Calculate grand totals
-            bill_grand_total = bill_total + bill_premium
-            extra_items_total = extra_items_base + extra_premium
-            total_with_premium = bill_grand_total + extra_items_total
-            
-            # Calculate difference from last bill
-            difference_from_last = total_with_premium - last_bill_amount
-            
-            # Update first_page_data totals with expanded values
-            expanded_totals = dict(first_page_data.get("totals", {}))
-            expanded_totals.update({
-                "total_with_premium": total_with_premium,
-                "extra_items_total": extra_items_total,
-                "net_payable": total_with_premium,  # This will be updated after deductions
-                "last_bill_amount": last_bill_amount,
-                "difference_from_last": difference_from_last,
-                "premium": {
-                    "percent": premium_fraction,
-                    "amount": bill_premium + extra_premium,
-                    "type": premium_type
-                },
-                "grand_total": bill_grand_total + extra_items_total,
-                "payable": total_with_premium
-            })
-            
-            # Apply standard deductions
-            sd_pct, it_pct, gst_pct, lc_pct = 0.10, 0.02, 0.02, 0.01
-            expanded_totals.update({
-                "sd_amount": round(total_with_premium * sd_pct),
-                "it_amount": round(total_with_premium * it_pct),
-                "gst_amount": round(total_with_premium * gst_pct),
-                "lc_amount": round(total_with_premium * lc_pct)
-            })
-            
-            # Calculate total deductions and update net payable
-            total_deductions = sum([
-                expanded_totals["sd_amount"],
-                expanded_totals["it_amount"],
-                expanded_totals["gst_amount"],
-                expanded_totals["lc_amount"]
-            ])
-            expanded_totals["total_deductions"] = total_deductions
-            expanded_totals["net_payable"] = max(total_with_premium - total_deductions, 0)
-            
-            # Update first_page_data with the expanded totals
-            first_page_data["totals"] = expanded_totals
-            
-            # Create deductions dictionary for templates
-            deductions = {
-                "sd_amount": expanded_totals["sd_amount"],
-                "it_amount": expanded_totals["it_amount"],
-                "gst_amount": expanded_totals["gst_amount"],
-                "lc_amount": expanded_totals["lc_amount"],
-                "total_deductions": expanded_totals["total_deductions"]
-            }
-            
-            # Prepare template data with all required fields
-            templates_data = {
-                "first_page": {
-                    "bill_items": first_page_data["items"], 
-                    "header": first_page_data["header"], 
-                    "totals": expanded_totals,
-                    "deductions": deductions,
-                    "last_bill_amount": last_bill_amount,
-                    "net_payable": expanded_totals["net_payable"],
-                    "bill_total": bill_total,
-                    "bill_premium": bill_premium,
-                    "bill_grand_total": bill_grand_total,
-                    "extra_items": extra_items_only,
-                    "extra_items_base": extra_items_base,
-                    "extra_premium": extra_premium,
-                    "extra_items_sum": extra_items_total,
-                    "tender_premium_percent": premium_fraction,
-                },
-                "certificate_ii": {
-                    "measurement_officer": "Site Engineer", 
-                    "measurement_date": datetime.now().strftime("%d-%m-%Y"), 
-                    "measurement_book_page": "04-20", 
-                    "measurement_book_no": "887", 
-                    "officer_name": "Site Engineer", 
-                    "officer_designation": "Assistant Engineer", 
-                    "authorising_officer_name": "Executive Engineer", 
-                    "authorising_officer_designation": "Executive Engineer"
-                },
-                "certificate_iii": {
-                    "totals": expanded_totals, 
-                    "deductions": deductions,
-                    "payable_words": last_page_data.get("amount_words", ""), 
-                    "current_date": datetime.now(),
-                    "calculations": {
-                        "amount_words": last_page_data.get("amount_words", "")
-                    }
-                },
-                "deviation_statement": {
-                    **deviation_data,
-                    "totals": {
-                        **expanded_totals,
-                        "work_order_total": 1000000,  # Same as work_order_amount used in note_sheet
-                        "premium_amount": round(1000000 * premium_fraction)
-                    },
-                    "premium_percent": premium_percent
-                },
-                "extra_items": {
-                    **extra_items_data,
-                    "totals": expanded_totals,
-                    "premium_percent": premium_percent
-                },
-                "note_sheet": {
-                    **generate_bill_notes(
-                        expanded_totals["net_payable"], 
-                        work_order_amount=1000000,  # You might want to make this configurable
-                        extra_item_amount=extra_items_total
-                    ),
-                    "deductions": deductions,
-                    "totals": expanded_totals,
-                    "extra_item_percentage": float(extra_items_total / 1000000 * 100) if 1000000 > 0 else 0,
-                    "approval_status": "approved" if float(extra_items_total / 1000000 * 100) <= 5 else "pending approval"
-                }
-            }
-            
+
+            # Store templates data in session
             st.session_state["templates_data"] = templates_data
-            
-            # Clear previously generated byte caches to avoid stale downloads
-            keys_to_delete = [
-                key for key in list(st.session_state.keys())
-                if key == "zip_bytes" or key.startswith("html_bytes_") or key.startswith("pdf_html_bytes_") or key.startswith("pdf_latex_bytes_")
-            ]
-            for key in keys_to_delete:
-                if key in st.session_state:
-                    del st.session_state[key]
+
+            # Display success message
+            st.success("Bill processed successfully!")
+
+            # Debug: Display the full templates_data to verify structure
+            if DEBUG_VERBOSE:
+                st.json(templates_data)
+
+            # Access the totals directly as per instructions
+            try:
+                totals = templates_data["first_page"]["totals"]
+
+                # Display key financial information
+                st.subheader("Bill Summary")
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    st.metric("Bill Total", f"₹{totals.get('bill_total', 0):,.2f}")
+                    st.metric(
+                        "Extra Items Base", f"₹{totals.get('extra_items_base', 0):,.2f}"
+                    )
+
+                with col2:
+                    premium = totals.get("premium", {})
+                    st.metric(
+                        f"Premium ({premium.get('percent', 0) * 100}% {premium.get('type', 'N/A')})",
+                        f"₹{premium.get('amount', 0):,.2f}",
+                    )
+                    st.metric(
+                        "Work Order Total", f"₹{totals.get('work_order_total', 0):,.2f}"
+                    )
+
+                with col3:
+                    st.metric(
+                        "Grand Total",
+                        f"₹{totals.get('grand_total', 0):,.2f}",
+                        delta=f"₹{totals.get('payable', 0):,.2f} after last bill",
+                    )
+
+                # Add download buttons for different templates
+                st.subheader("Download Documents")
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    if st.button("Generate PDF"):
+                        # Add PDF generation logic here
+                        pass
+
+                with col2:
+                    if st.button("Generate DOCX"):
+                        # Add DOCX generation logic here
+                        pass
+
+                with col3:
+                    if st.button("Download All"):
+                        # Add zip file generation logic here
+                        pass
+
+            except KeyError as e:
+                st.error(
+                    f"KeyError: {e}. The processed data is missing expected fields."
+                )
+                if DEBUG_VERBOSE:
+                    st.json(templates_data)
+
+        except KeyError as e:
+            st.error(
+                f"KeyError: {e}. Ensure the Excel file has the correct format and all required fields."
+            )
+            if DEBUG_VERBOSE:
+                st.exception(e)
         except Exception as e:
             st.error(f"Error processing file: {str(e)}")
-            _log_traceback()
-    
-    # If we have templates data, show download actions (persist across reruns)
-    if "templates_data" in st.session_state:
-        templates_data = st.session_state["templates_data"]
-        
-        # Combined download section (build once, then persistent download button)
-        st.subheader("Download All Documents")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📦 Build Complete Package (ZIP)", use_container_width=True, key="build_zip"):
-                with st.spinner("Creating complete document package..."):
-                    zip_path = create_combined_zip(templates_data)
-                    if zip_path and os.path.exists(zip_path):
-                        with open(zip_path, 'rb') as f:
-                            st.session_state["zip_bytes"] = f.read()
-                        st.success("✅ Package ready. Use the download button below.")
-                    else:
-                        st.error("Failed to create document package")
-            
-            if "zip_bytes" in st.session_state:
-                st.download_button(
-                    label="📥 Download ZIP Package",
-                    data=st.session_state["zip_bytes"],
-                    file_name="Bill_Documents_Complete.zip",
-                    mime="application/zip",
-                    use_container_width=True,
-                    key="zip_download"
-                )
-        with col2:
-            st.info("📋 **Package Contents:**\n- HTML templates\n- PDF from HTML\n- PDF from LaTeX\n- LaTeX source files")
-        
-        # Individual document generation (persist buttons)
-        st.subheader("Individual Documents")
-        templates = [
-            ("first_page", "First_Page"),
-            ("certificate_ii", "Certificate_II"),
-            ("certificate_iii", "Certificate_III"),
-            ("deviation_statement", "Deviation_Statement"),
-            ("extra_items", "Extra_Items"),
-            ("note_sheet", "Note_Sheet")
-        ]
-        
-        for template_name, doc_name in templates:
-            with st.expander(f"📄 {doc_name}", expanded=False):
-                col1, col2, col3 = st.columns(3)
-                
-                # Direct HTML download (fast; no pre-generation button)
-                with col1:
-                    try:
-                        template = env.get_template(f"{template_name}.html")
-                        html_content = template.render(data=templates_data[template_name])
-                        st.download_button(
-                            label=f"📥 Download {doc_name}.html",
-                            data=html_content,
-                            file_name=f"{doc_name}.html",
-                            mime="text/html",
-                            key=f"html_dl_{template_name}"
-                        )
-                    except Exception as e:
-                        st.error(f"Error: {str(e)}")
-                
-                # PDF from HTML (generate -> then persistent download button)
-                with col2:
-                    if config:
-                        if st.button(f"Generate PDF (HTML) - {doc_name}", key=f"gen_pdf_html_{template_name}"):
-                            try:
-                                with st.spinner(f"Generating {doc_name} PDF from HTML..."):
-                                    template = env.get_template(f"{template_name}.html")
-                                    html_content = template.render(data=templates_data[template_name])
-                                    temp_dir = get_temp_dir()
-                                    pdf_path = os.path.join(temp_dir, f"{doc_name}.pdf")
-                                    options = {
-                                        'page-size': 'A4',
-                                        'margin-top': '10mm',
-                                        'margin-right': '10mm',
-                                        'margin-bottom': '10mm',
-                                        'margin-left': '10mm',
-                                        'encoding': "UTF-8",
-                                        'no-outline': None,
-                                        'enable-local-file-access': None
-                                    }
-                                    pdfkit.from_string(html_content, pdf_path, options=options, configuration=config)
-                                    if os.path.exists(pdf_path):
-                                        with open(pdf_path, 'rb') as f:
-                                            st.session_state[f"pdf_html_bytes_{template_name}"] = f.read()
-                                        st.success("PDF ready. Use the download button below.")
-                                    else:
-                                        st.error(f"Failed to generate {doc_name} PDF")
-                            except Exception as e:
-                                st.error(f"Error: {str(e)}")
-                    else:
-                        st.error("PDF generation not available")
-                    
-                    if f"pdf_html_bytes_{template_name}" in st.session_state:
-                        st.download_button(
-                            label=f"📥 Download {doc_name}_HTML.pdf",
-                            data=st.session_state[f"pdf_html_bytes_{template_name}"],
-                            file_name=f"{doc_name}_HTML.pdf",
-                            mime="application/pdf",
-                            key=f"pdf_html_dl_{template_name}"
-                        )
-                
-                # PDF from LaTeX (generate -> then persistent download button)
-                with col3:
-                    if st.button(f"Generate PDF (LaTeX) - {doc_name}", key=f"gen_pdf_latex_{template_name}"):
-                        try:
-                            with st.spinner(f"Generating LaTeX {doc_name} PDF..."):
-                                temp_dir = get_temp_dir()
-                                pdf_path = os.path.join(temp_dir, f"{doc_name}_LaTeX.pdf")
-                                if generate_latex_pdf(template_name, templates_data[template_name], pdf_path):
-                                    with open(pdf_path, 'rb') as f:
-                                        st.session_state[f"pdf_latex_bytes_{template_name}"] = f.read()
-                                    st.success("LaTeX PDF ready. Use the download button below.")
-                                else:
-                                    st.error("LaTeX PDF generation failed - pdflatex not available")
-                        except Exception as e:
-                            st.error(f"Error: {str(e)}")
-                    
-                    if f"pdf_latex_bytes_{template_name}" in st.session_state:
-                        st.download_button(
-                            label=f"📥 Download {doc_name}_LaTeX.pdf",
-                            data=st.session_state[f"pdf_latex_bytes_{template_name}"],
-                            file_name=f"{doc_name}_LaTeX.pdf",
-                            mime="application/pdf",
-                            key=f"pdf_latex_dl_{template_name}"
-                        )
-        
-        # Display summary (based on templates_data)
-        with st.expander("Bill Summary", expanded=True):
-            totals = templates_data['first_page']['totals']
-            st.write(f"**Total Amount:** ₹{totals.get('grand_total', 0):,}")
-            premium = totals.get('premium', {})
-            premium_amount = premium.get('amount', 0)
-            st.write(f"**Premium ({premium_percent}% {premium_type}):** ₹{premium_amount:,}")
-            st.write(f"**Payable Amount:** ₹{totals.get('payable', 0):,}")
-            st.write(f"**Amount in Words:** {templates_data['certificate_iii'].get('payable_words', '')}")
+            if DEBUG_VERBOSE:
+                st.exception(e)
+
 
 if __name__ == "__main__":
     main()
+

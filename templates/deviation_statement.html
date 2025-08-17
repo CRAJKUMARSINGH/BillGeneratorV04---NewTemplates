@@ -122,11 +122,8 @@
             <td><strong>{{ "%.2f"|format(abs(data.totals.total_with_premium - (data.totals.work_order_total or 0))) }}</strong></td>
         </tr>
         <tr>
-            <td>Percentage of Deviation %</td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td><strong>{{ "%.2f"|format(abs((data.totals.total_with_premium - (data.totals.work_order_total or 1)) / (data.totals.work_order_total or 1) * 100)) }}%</strong></td>
+            <td colspan="8" style="text-align: right; padding-right: 20px;">Percentage of Deviation %</td>
+            <td colspan="2" style="text-align: center;">{{ "%.2f"|format(data.totals.deviation_percentage) }}%</td>
         </tr>
     </table>
 
