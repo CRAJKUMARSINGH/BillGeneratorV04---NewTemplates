@@ -1,0 +1,72 @@
+\textbackslash{}documentclass[11pt, portrait]\{article\}
+
+\% Professional government document packages
+\textbackslash{}usepackage[a4paper, portrait, margin=15mm]\{geometry\}
+\textbackslash{}usepackage[utf8]\{inputenc\}
+\textbackslash{}usepackage[T1]\{fontenc\}
+\textbackslash{}usepackage\{array\}
+\textbackslash{}usepackage\{booktabs\}
+\textbackslash{}usepackage\{longtable\}
+\textbackslash{}usepackage\{xcolor\}
+\textbackslash{}usepackage\{amsmath\}
+\textbackslash{}usepackage\{amsfonts\}
+\textbackslash{}usepackage\{fancyhdr\}
+
+\% Font configuration for government standards
+\textbackslash{}usepackage\{helvet\}
+\textbackslash{}renewcommand\{\textbackslash{}familydefault\}\{\textbackslash{}sfdefault\}
+
+\% Professional spacing and formatting
+\textbackslash{}setlength\{\textbackslash{}parindent\}\{0pt\}
+\textbackslash{}setlength\{\textbackslash{}parskip\}\{6pt\}
+\textbackslash{}renewcommand\{\textbackslash{}arraystretch\}\{1.3\}
+
+\% Table formatting improvements
+\textbackslash{}setlength\{\textbackslash{}tabcolsep\}\{4pt\}
+\textbackslash{}setlength\{\textbackslash{}arrayrulewidth\}\{0.5pt\}
+
+\% Header and footer
+\textbackslash{}pagestyle\{fancy\}
+\textbackslash{}fancyhf\{\}
+\textbackslash{}fancyhead[C]\{\textbackslash{}textbf\{First Page\}\}
+\textbackslash{}fancyfoot[C]\{\textbackslash{}thepage\}
+\textbackslash{}renewcommand\{\textbackslash{}headrulewidth\}\{0.4pt\}
+\textbackslash{}renewcommand\{\textbackslash{}footrulewidth\}\{0.4pt\}
+
+\textbackslash{}begin\{document\}
+
+\% Document header
+\textbackslash{}begin\{center\}
+\{\textbackslash{}LARGE \textbackslash{}textbf\{First Page\}\}\textbackslash{}\textbackslash{}[0.5cm]
+\{\textbackslash{}large Government Document Template\}\textbackslash{}\textbackslash{}[0.4cm]
+\{\textbackslash{}normalsize Generated from: first\_page.html\}\textbackslash{}\textbackslash{}[0.3cm]
+\textbackslash{}rule\{\textbackslash{}textwidth\}\{0.8pt\}
+\textbackslash{}end\{center\}
+
+\textbackslash{}vspace\{1cm\}
+
+\% Main content
+\textbackslash{}begin\{longtable\}\{|p\{11.1mm\}|p\{74.2mm\}|p\{11.7mm\}|p\{16mm\}|p\{16mm\}|p\{15.3mm\}|p\{22.7mm\}|p\{17.6mm\}|p\{13.9mm\}|\}
+\textbackslash{}hline
+\textbackslash{}textbf\{Item No.\} \& \textbackslash{}textbf\{Item of Work supplies (Grouped under ``sub-head'' and ``sub work'' of estimate)\} \& \textbackslash{}textbf\{Unit\} \& \textbackslash{}textbf\{Quantity executed (or supplied) since last certificate\} \& \textbackslash{}textbf\{Quantity executed (or supplied) upto date as per MB\} \& \textbackslash{}textbf\{Rate\} \& \textbackslash{}textbf\{Amount upto date\} \& \textbackslash{}textbf\{Amount Since previous bill (Total for each sub-head)\} \& \textbackslash{}textbf\{Remark\} \textbackslash{}\textbackslash{}
+\textbackslash{}hline
+\textbackslash{}endhead
+1 \& \textbackslash{}textbf\{\textbackslash{}\%s\} \& \textbackslash{}textbf\{\textbackslash{}\%s\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%s\} \textbackslash{}\textbackslash{}
+2 \& \textbackslash{}textbf\{\textbackslash{}\%s\} \& \textbackslash{}textbf\{\textbackslash{}\%s\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%s\} \textbackslash{}\textbackslash{}
+3 \& \textbackslash{}textbf\{\textbackslash{}\%s\} \& \textbackslash{}textbf\{\textbackslash{}\%s\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%s\} \textbackslash{}\textbackslash{}
+4 \& \textbackslash{}textbf\{\textbackslash{}\%s\} \& \textbackslash{}textbf\{\textbackslash{}\%s\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%s\} \textbackslash{}\textbackslash{}
+5 \& \textbackslash{}textbf\{\textbackslash{}\%s\} \& \textbackslash{}textbf\{\textbackslash{}\%s\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%.2f\} \& \textbackslash{}textbf\{\textbackslash{}\%s\} \textbackslash{}\textbackslash{}
+\textbackslash{}hline
+\textbackslash{}end\{longtable\}
+
+\textbackslash{}vspace\{1cm\}
+
+\% Footer
+\textbackslash{}begin\{center\}
+\textbackslash{}rule\{\textbackslash{}textwidth\}\{0.4pt\}\textbackslash{}\textbackslash{}[0.3cm]
+\{\textbackslash{}small This document was converted from HTML template: \textbackslash{}texttt\{first\_page.html\}\}\textbackslash{}\textbackslash{}
+\{\textbackslash{}small Converted to LaTeX format for professional government document generation\}\textbackslash{}\textbackslash{}
+\{\textbackslash{}small Compilation date: \textbackslash{}today\textbackslash{} at 01:11 PM IST\}
+\textbackslash{}end\{center\}
+
+\textbackslash{}end\{document\}

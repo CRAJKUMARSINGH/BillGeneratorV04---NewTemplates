@@ -1,0 +1,77 @@
+\textbackslash{}documentclass[11pt, portrait]\{article\}
+
+\% Professional government document packages
+\textbackslash{}usepackage[a4paper, portrait, margin=15mm]\{geometry\}
+\textbackslash{}usepackage[utf8]\{inputenc\}
+\textbackslash{}usepackage[T1]\{fontenc\}
+\textbackslash{}usepackage\{array\}
+\textbackslash{}usepackage\{booktabs\}
+\textbackslash{}usepackage\{longtable\}
+\textbackslash{}usepackage\{xcolor\}
+\textbackslash{}usepackage\{amsmath\}
+\textbackslash{}usepackage\{amsfonts\}
+\textbackslash{}usepackage\{fancyhdr\}
+
+\% Font configuration for government standards
+\textbackslash{}usepackage\{helvet\}
+\textbackslash{}renewcommand\{\textbackslash{}familydefault\}\{\textbackslash{}sfdefault\}
+
+\% Professional spacing and formatting
+\textbackslash{}setlength\{\textbackslash{}parindent\}\{0pt\}
+\textbackslash{}setlength\{\textbackslash{}parskip\}\{6pt\}
+\textbackslash{}renewcommand\{\textbackslash{}arraystretch\}\{1.3\}
+
+\% Table formatting improvements
+\textbackslash{}setlength\{\textbackslash{}tabcolsep\}\{4pt\}
+\textbackslash{}setlength\{\textbackslash{}arrayrulewidth\}\{0.5pt\}
+
+\% Header and footer
+\textbackslash{}pagestyle\{fancy\}
+\textbackslash{}fancyhf\{\}
+\textbackslash{}fancyhead[C]\{\textbackslash{}textbf\{Extra Items\}\}
+\textbackslash{}fancyfoot[C]\{\textbackslash{}thepage\}
+\textbackslash{}renewcommand\{\textbackslash{}headrulewidth\}\{0.4pt\}
+\textbackslash{}renewcommand\{\textbackslash{}footrulewidth\}\{0.4pt\}
+
+\textbackslash{}begin\{document\}
+
+\% Document header
+\textbackslash{}begin\{center\}
+\{\textbackslash{}LARGE \textbackslash{}textbf\{Extra Items\}\}\textbackslash{}\textbackslash{}[0.5cm]
+\{\textbackslash{}large Government Document Template\}\textbackslash{}\textbackslash{}[0.4cm]
+\{\textbackslash{}normalsize Generated from: extra\_items.html\}\textbackslash{}\textbackslash{}[0.3cm]
+\textbackslash{}rule\{\textbackslash{}textwidth\}\{0.8pt\}
+\textbackslash{}end\{center\}
+
+\textbackslash{}vspace\{1cm\}
+
+\% Main content
+\textbackslash{}begin\{longtable\}\{|p\{1.11cm\}|p\{1.5cm\}|p\{7.09cm\}|p\{1.6cm\}|p\{1.6cm\}|p\{1.53cm\}|p\{2.27cm\}|p\{3.15cm\}|\}
+\textbackslash{}hline
+\textbackslash{}textbf\{S.No.\} \& \textbackslash{}textbf\{Ref. BSR No.\} \& \textbackslash{}textbf\{Particulars\} \& \textbackslash{}textbf\{Qty.\} \& \textbackslash{}textbf\{Unit\} \& \textbackslash{}textbf\{Rate\} \& \textbackslash{}textbf\{Amount\} \& \textbackslash{}textbf\{Remarks\} \& \textbackslash{}\textbackslash{}
+\textbackslash{}hline
+\textbackslash{}endhead
+\{\% for item in data.extra\_items \%\}
+\textbackslash{}textbf\{\{\%s\}\} \& \textbackslash{}textbf\{\{\%s\}\} \& \textbackslash{}textbf\{\{\%s\}\} \& \textbackslash{}textbf\{\{\%s\}\} \& \textbackslash{}textbf\{\{\%s\}\} \& \textbackslash{}textbf\{\{\%s\}\} \& \textbackslash{}textbf\{\{\%s\}\} \& \textbackslash{}textbf\{\{\%s\}\} \& \textbackslash{}\textbackslash{}
+\{\% endfor \%\}
+\{\% if not data.extra\_items \%\}
+\textbackslash{}multicolumn\{8\}\{c\}\{No extra items\} \textbackslash{}\textbackslash{}
+\{\% endif \%\}
+\textbackslash{}hline
+\textbackslash{}multicolumn\{6\}\{l\}\{\textbackslash{}textbf\{Grand Total\}\} \& \& \& \& \textbackslash{}textbf\{\{\%s\}\} \& \& \textbackslash{}\textbackslash{}
+\textbackslash{}multicolumn\{6\}\{l\}\{\textbackslash{}textbf\{Tender Premium @ \{\%s\}\textbackslash{}\% \{\%s\}\}\} \& \& \& \& \textbackslash{}textbf\{\{\%s\}\} \& \& \textbackslash{}\textbackslash{}
+\textbackslash{}multicolumn\{6\}\{l\}\{\textbackslash{}textbf\{Total Amount of Extra Item Executed\}\} \& \& \& \& \textbackslash{}textbf\{\{\%s\}\} \& \& \textbackslash{}\textbackslash{}
+\textbackslash{}hline
+\textbackslash{}end\{longtable\}
+
+\textbackslash{}vspace\{1cm\}
+
+\% Footer
+\textbackslash{}begin\{center\}
+\textbackslash{}rule\{\textbackslash{}textwidth\}\{0.4pt\}\textbackslash{}\textbackslash{}[0.3cm]
+\{\textbackslash{}small This document was converted from HTML template: \textbackslash{}texttt\{extra\_items.html\}\}\textbackslash{}\textbackslash{}
+\{\textbackslash{}small Converted to LaTeX format for professional government document generation\}\textbackslash{}\textbackslash{}
+\{\textbackslash{}small Compilation date: \textbackslash{}today\textbackslash{} at 01:11 PM IST\}
+\textbackslash{}end\{center\}
+
+\textbackslash{}end\{document\}

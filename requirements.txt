@@ -1,0 +1,12 @@
+# requirements.txt
+streamlit
+pandas
+openpyxl
+pdfkit
+python-docx
+num2words
+jinja2
+pypdf
+numpy
+requests
+xhtml2pdf

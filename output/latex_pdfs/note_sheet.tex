@@ -1,0 +1,120 @@
+\textbackslash{}documentclass[11pt, portrait]\{article\}
+
+\% Professional government document packages
+\textbackslash{}usepackage[a4paper, portrait, margin=15mm]\{geometry\}
+\textbackslash{}usepackage[utf8]\{inputenc\}
+\textbackslash{}usepackage[T1]\{fontenc\}
+\textbackslash{}usepackage\{array\}
+\textbackslash{}usepackage\{booktabs\}
+\textbackslash{}usepackage\{longtable\}
+\textbackslash{}usepackage\{xcolor\}
+\textbackslash{}usepackage\{amsmath\}
+\textbackslash{}usepackage\{amsfonts\}
+\textbackslash{}usepackage\{fancyhdr\}
+
+\% Font configuration for government standards
+\textbackslash{}usepackage\{helvet\}
+\textbackslash{}renewcommand\{\textbackslash{}familydefault\}\{\textbackslash{}sfdefault\}
+
+\% Professional spacing and formatting
+\textbackslash{}setlength\{\textbackslash{}parindent\}\{0pt\}
+\textbackslash{}setlength\{\textbackslash{}parskip\}\{6pt\}
+\textbackslash{}renewcommand\{\textbackslash{}arraystretch\}\{1.3\}
+
+\% Table formatting improvements
+\textbackslash{}setlength\{\textbackslash{}tabcolsep\}\{4pt\}
+\textbackslash{}setlength\{\textbackslash{}arrayrulewidth\}\{0.5pt\}
+
+\% Header and footer
+\textbackslash{}pagestyle\{fancy\}
+\textbackslash{}fancyhf\{\}
+\textbackslash{}fancyhead[C]\{\textbackslash{}textbf\{Note Sheet\}\}
+\textbackslash{}fancyfoot[C]\{\textbackslash{}thepage\}
+\textbackslash{}renewcommand\{\textbackslash{}headrulewidth\}\{0.4pt\}
+\textbackslash{}renewcommand\{\textbackslash{}footrulewidth\}\{0.4pt\}
+
+\textbackslash{}begin\{document\}
+
+\% Document header
+\textbackslash{}begin\{center\}
+\{\textbackslash{}LARGE \textbackslash{}textbf\{Note Sheet\}\}\textbackslash{}\textbackslash{}[0.5cm]
+\{\textbackslash{}large Government Document Template\}\textbackslash{}\textbackslash{}[0.4cm]
+\{\textbackslash{}normalsize Generated from: note\_sheet.html\}\textbackslash{}\textbackslash{}[0.3cm]
+\textbackslash{}rule\{\textbackslash{}textwidth\}\{0.8pt\}
+\textbackslash{}end\{center\}
+
+\textbackslash{}vspace\{1cm\}
+
+\% Main content
+\textbackslash{}begin\{tabular\}\{p\{8mm\} p\{72mm\} p\{118.5mm\}\}
+1 \& Chargeable Head \& 8443-00-108-00-00 \textbackslash{}\textbackslash{}
+2 \& Agreement No. \& \textbackslash{}textbf\{\textbackslash{}\%s\} \textbackslash{}\textbackslash{}
+3 \& Adm. Section \& \textbackslash{}\textbackslash{}
+4 \& Tech. Section \& \textbackslash{}\textbackslash{}
+5 \& M.B No. \& 887/Pg. No. 04-20 \textbackslash{}\textbackslash{}
+6 \& Name of Sub Dn \& Rajsamand \textbackslash{}\textbackslash{}
+7 \& Name of Work \& \textbackslash{}textbf\{\textbackslash{}\%s\} \textbackslash{}\textbackslash{}
+8 \& Name of Firm \& \textbackslash{}textbf\{\textbackslash{}\%s\} \textbackslash{}\textbackslash{}
+9 \& Original/Deposit \& Deposit \textbackslash{}\textbackslash{}
+11 \& Date of Commencement \& \textbackslash{}textbf\{\textbackslash{}\%s\} \textbackslash{}\textbackslash{}
+12 \& Date of Completion \& \textbackslash{}textbf\{\textbackslash{}\%s\} \textbackslash{}\textbackslash{}
+13 \& Actual Date of Completion \& \textbackslash{}textbf\{\textbackslash{}\%s\} \textbackslash{}\textbackslash{}
+14 \& In case of delay weather, Provisional Extension Granted \& \textbackslash{}textbf\{\textbackslash{}\%s\} \textbackslash{}\textbackslash{}
+15 \& Whether any notice issued \& \textbackslash{}\textbackslash{}
+16 \& Amount of Work Order Rs. \& \textbackslash{}textbf\{\textbackslash{}\%d\} \textbackslash{}\textbackslash{}
+17 \& Actual Expenditure up to this Bill Rs. \& \textbackslash{}textbf\{\textbackslash{}\%d\} \textbackslash{}\textbackslash{}
+18 \& Balance to be done Rs. \& NIL \textbackslash{}\textbackslash{}
+\& Net Amount of This Bill Rs. \& \textbackslash{}textbf\{\textbackslash{}\%d\} \textbackslash{}\textbackslash{}
+19 \& Prorata Progress on the Work maintained by the Firm \& Till date \textbackslash{}textbf\{\textbackslash{}\%.2f\}\textbackslash{}\% Work is executed \textbackslash{}\textbackslash{}
+20 \& Date on Which record Measurement taken by JEN AC \& \textbackslash{}\textbackslash{}
+21 \& Date of Checking and \textbackslash{}\% on the Checked By AEN \& \textbackslash{}\textbackslash{}
+22 \& No. Of selection item checked by the EE \& \textbackslash{}\textbackslash{}
+23 \& Other Inputs \& \textbackslash{}\textbackslash{}
+\& (A) Is It a Repair / Maintenance Work \& No \textbackslash{}\textbackslash{}
+\& (B) Extra Item \& \textbackslash{}textbf\{\textbackslash{}\%s\} \textbackslash{}\textbackslash{}
+\& Amount of Extra Items Rs. \& \textbackslash{}textbf\{\textbackslash{}\%d\} \textbackslash{}\textbackslash{}
+\& (C) Any Excess Item Executed? \& No \textbackslash{}\textbackslash{}
+\& (D) Any Inadvertent Delay in Bill Submission? \& No \textbackslash{}\textbackslash{}
+\& Deductions:- \& \textbackslash{}\textbackslash{}
+\& S.D.II \& \textbackslash{}textbf\{\textbackslash{}\%d\} \textbackslash{}\textbackslash{}
+\& I.T. \& \textbackslash{}textbf\{\textbackslash{}\%d\} \textbackslash{}\textbackslash{}
+\& GST \& \textbackslash{}textbf\{\textbackslash{}\%d\} \textbackslash{}\textbackslash{}
+\& L.C. \& \textbackslash{}textbf\{\textbackslash{}\%d\} \textbackslash{}\textbackslash{}
+\& Liquidated Damages (Recovery) \& \textbackslash{}textbf\{\textbackslash{}\%d\} \textbackslash{}\textbackslash{}
+\& Cheque \& \textbackslash{}textbf\{\textbackslash{}\%d\} \textbackslash{}\textbackslash{}
+\& Total \& \textbackslash{}textbf\{\textbackslash{}\%d\} \textbackslash{}\textbackslash{}
+\textbackslash{}end\{tabular\}
+
+\textbackslash{}vspace\{1cm\}
+
+\textbackslash{}begin\{center\}
+\textbackslash{}large Notes:
+\textbackslash{}end\{center\}
+
+\textbackslash{}begin\{itemize\}
+\textbackslash{}item[\textbackslash{}textbf\{1.\}] The work has been completed \textbackslash{}textbf\{\textbackslash{}\%.2f\}\textbackslash{}\% of the Work Order Amount.
+\textbackslash{}item[\textbackslash{}textbf\{2.\}] \textbackslash{}textbf\{\textbackslash{}\%s\}
+\textbackslash{}item[\textbackslash{}textbf\{3.\}] \textbackslash{}textbf\{\textbackslash{}\%s\}
+\textbackslash{}item[\textbackslash{}textbf\{4.\}] The amount of Extra items is Rs. \textbackslash{}textbf\{\textbackslash{}\%d\} which is \textbackslash{}textbf\{\textbackslash{}\%.2f\}\textbackslash{}\% of the Work Order Amount; \textbackslash{}textbf\{\textbackslash{}\%s\}.
+\textbackslash{}item[\textbackslash{}textbf\{5.\}] Quality Control (QC) test reports attached.
+\textbackslash{}item[\textbackslash{}textbf\{6.\}] Please peruse above details for necessary decision-making.
+\textbackslash{}end\{itemize\}
+
+\textbackslash{}vspace\{1cm\}
+
+\textbackslash{}begin\{tabular\}\{p\{150mm\}\}
+\textbackslash{}multicolumn\{1\}\{r\}\{Premlata Jain\} \textbackslash{}\textbackslash{}
+\textbackslash{}multicolumn\{1\}\{r\}\{AAO- As Auditor\} \textbackslash{}\textbackslash{}
+\textbackslash{}end\{tabular\}
+
+\textbackslash{}vspace\{1cm\}
+
+\% Footer
+\textbackslash{}begin\{center\}
+\textbackslash{}rule\{\textbackslash{}textwidth\}\{0.4pt\}\textbackslash{}\textbackslash{}[0.3cm]
+\{\textbackslash{}small This document was converted from HTML template: \textbackslash{}texttt\{note\_sheet.html\}\}\textbackslash{}\textbackslash{}
+\{\textbackslash{}small Converted to LaTeX format for professional government document generation\}\textbackslash{}\textbackslash{}
+\{\textbackslash{}small Compilation date: \textbackslash{}today\textbackslash{} at 01:11 PM IST\}
+\textbackslash{}end\{center\}
+
+\textbackslash{}end\{document\}
